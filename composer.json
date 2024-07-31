@@ -1,0 +1,44 @@
+{
+    "name": "aleedhillon/meta-trader-client",
+    "description": "A Laravel package for seamless integration with the MetaTrader 5 web API, enabling account management, trading operations, and more.",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Ali A. Dhillon",
+            "email": "aleedhx@gmail.com",
+            "homepage": "https://aleedhillon.com"
+        }
+    ],
+    "homepage": "https://github.com/aleedhillon/meta-trader-client",
+    "keywords": [
+        "Laravel",
+        "MetaTraderClient"
+    ],
+    "require": {
+        "illuminate/support": "~9"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "~9.0",
+        "orchestra/testbench": "~7"
+    },
+    "autoload": {
+        "psr-4": {
+            "Aleedhillon\\MetaTraderClient\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Aleedhillon\\MetaTraderClient\\Tests\\": "tests"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Aleedhillon\\MetaTraderClient\\MetaTraderClientServiceProvider"
+            ],
+            "aliases": {
+                "MetaTraderClient": "Aleedhillon\\MetaTraderClient\\Facades\\MetaTraderClient"
+            }
+        }
+    }
+}
