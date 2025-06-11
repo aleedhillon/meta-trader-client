@@ -70,11 +70,11 @@ class MetaTraderClient
         $this->agent = $agent;
         $this->shouldCrypt = $shouldCrypt;
 
-        $this->ip = $ip ?? config('meta-trader-client.ip');
-        $this->port = $port ?? config('meta-trader-client.port');
-        $this->timeout = $timeout ?? config('meta-trader-client.timeout');
-        $this->login = $login ?? config('meta-trader-client.login');
-        $this->password = $password ?? config('meta-trader-client.password');
+        $this->ip = $ip;
+        $this->port = $port;
+        $this->timeout = $timeout;
+        $this->login = $login;
+        $this->password = $password;
 
         MTLogger::Init($agent, true, $file_path);
     }
