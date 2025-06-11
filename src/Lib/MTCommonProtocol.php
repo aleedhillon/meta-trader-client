@@ -1,4 +1,5 @@
 <?php
+
 namespace Aleedhillon\MetaTraderClient\Lib;
 
 //+------------------------------------------------------------------+
@@ -7,74 +8,72 @@ namespace Aleedhillon\MetaTraderClient\Lib;
 //|                                        http://www.metaquotes.net |
 //+------------------------------------------------------------------+
 /**
- * Send common_get to MetaTrader 5 Server
+ * Class for send request common_get
  */
 class MTCommonProtocol
 {
-    private $m_connect = null;
-    public function __construct($connect)
+    private MTConnect $connection;
+
+    public function __construct(MTConnect $connect)
     {
-        $this->m_connect = $connect;
+        $this->connection = $connect;
     }
+
     /**
      * send request common_get
      * @param MTConCommon $common - config from MT5 server
-     * @return MTRetCode
+     * @return int
      */
-    public function CommonGet(&$common)
+    public function CommonGet(&$common): int
     {
         //--- send request
-        if (!$this->m_connect->Send(MTProtocolConsts::WEB_CMD_COMMON_GET, "")) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'send common get failed');
+        if (!$this->connection->Send(MTProtocolConsts::WEB_CMD_COMMON_GET, "")) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- get answer
-        if (($answer = $this->m_connect->Read()) == null) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'answer common get is empty');
+        if (($answer = $this->connection->Read()) == null) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- parse answer
-        if (($error_code = $this->ParseCommonGet($answer, $common_answer)) != MTRetCode::MT_RET_OK) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'parse common get failed: [' . $error_code . ']' . MTRetCode::GetError($error_code));
-            return $error_code;
+        $commonAnswer = null;
+        if (($errorCode = $this->ParseCommon($answer, $commonAnswer)) != MTRetCode::MT_RET_OK) {
+            return $errorCode;
         }
-        //---
-        $common = $common_answer->GetFromJson();
+        //--- get object from json
+        $common = $commonAnswer->GetFromJson();
         //---
         return MTRetCode::MT_RET_OK;
     }
+
     /**
      * check answer from MetaTrader 5 server
      * @param  string $answer
-     * @param  MTCommonGetAnswer $common_answer
-     * @return MTRetCode
+     * @param  MTCommonGetAnswer $commonAnswer
+     * @return int
      */
-    private function ParseCommonGet(&$answer, &$common_answer)
+    private function ParseCommon(string &$answer, &$commonAnswer): int
     {
         $pos = 0;
         //--- get command answer
-        $command = $this->m_connect->GetCommand($answer, $pos);
+        $command = $this->connection->GetCommand($answer, $pos);
         if ($command != MTProtocolConsts::WEB_CMD_COMMON_GET)
             return MTRetCode::MT_RET_ERR_DATA;
         //---
-        $common_answer = new MTCommonGetAnswer();
+        $commonAnswer = new MTCommonGetAnswer();
         //--- get param
-        $pos_end = -1;
-        while (($param = $this->m_connect->GetNextParam($answer, $pos, $pos_end)) != null) {
+        $posEnd = -1;
+        while (($param = $this->connection->GetNextParam($answer, $pos, $posEnd)) != null) {
             switch ($param['name']) {
                 case MTProtocolConsts::WEB_PARAM_RETCODE:
-                    $common_answer->RetCode = $param['value'];
+                    $commonAnswer->RetCode = $param['value'];
                     break;
             }
         }
         //--- check ret code
-        if (($ret_code = MTConnect::GetRetCode($common_answer->RetCode)) != MTRetCode::MT_RET_OK)
-            return $ret_code;
+        if (($retCode = MTConnect::GetRetCode($commonAnswer->RetCode)) != MTRetCode::MT_RET_OK)
+            return $retCode;
         //--- get json
-        if (($common_answer->ConfigJson = $this->m_connect->GetJson($answer, $pos_end)) == null)
+        if (($commonAnswer->ConfigJson = $this->connection->GetJson($answer, $pos)) == null)
             return MTRetCode::MT_RET_REPORT_NODATA;
         //---
         return MTRetCode::MT_RET_OK;

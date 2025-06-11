@@ -1,4 +1,5 @@
 <?php
+
 namespace Aleedhillon\MetaTraderClient\Lib;
 
 /**
@@ -139,6 +140,84 @@ class MTConGroupSymbol
     //--- book depth limit
     public $BookDepthLimit;
 
+    // Dynamic properties used for JSON serialization
+    /**
+     * @var mixed
+     */
+    public $MarginLiquidity;
+    /**
+     * @var mixed
+     */
+    public $MarginCurrency;
+    /**
+     * @var mixed
+     */
+    public $MarginInitialBuy;
+    /**
+     * @var mixed
+     */
+    public $MarginInitialSell;
+    /**
+     * @var mixed
+     */
+    public $MarginInitialBuyLimit;
+    /**
+     * @var mixed
+     */
+    public $MarginInitialSellLimit;
+    /**
+     * @var mixed
+     */
+    public $MarginInitialBuyStop;
+    /**
+     * @var mixed
+     */
+    public $MarginInitialSellStop;
+    /**
+     * @var mixed
+     */
+    public $MarginInitialBuyStopLimit;
+    /**
+     * @var mixed
+     */
+    public $MarginInitialSellStopLimit;
+    /**
+     * @var mixed
+     */
+    public $MarginMaintenanceBuy;
+    /**
+     * @var mixed
+     */
+    public $MarginMaintenanceSell;
+    /**
+     * @var mixed
+     */
+    public $MarginMaintenanceBuyLimit;
+    /**
+     * @var mixed
+     */
+    public $MarginMaintenanceSellLimit;
+    /**
+     * @var mixed
+     */
+    public $MarginMaintenanceBuyStop;
+    /**
+     * @var mixed
+     */
+    public $MarginMaintenanceSellStop;
+    /**
+     * @var mixed
+     */
+    public $MarginMaintenanceBuyStopLimit;
+    /**
+     * @var mixed
+     */
+    public $MarginMaintenanceSellStopLimit;
+    /**
+     * @var mixed
+     */
+    public $PermissionsBookdepth;
+
     /**
      * Create MTConGroupSymbol with default values
      * @return MTConGroupSymbol
@@ -225,7 +304,7 @@ class MTConGroupSymbol
      *
      * @param string $name
      *
-     * @return int|uint|float
+     * @return int|float
      */
     public static function GetDefault($name)
     {
@@ -290,7 +369,7 @@ class MTConGroupSymbol
                 return MTConGroupSymbol::DEFAULT_VALUE_UINT;
             case "ievolumemax":
                 return MTConGroupSymbol::DEFAULT_VALUE_UINT64;
-            //--- DEPRECATED
+                //--- DEPRECATED
             case "marginlong":
                 return MTConGroupSymbol::DEFAULT_VALUE_DOUBLE;
             case "marginshort":

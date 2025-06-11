@@ -1,4 +1,5 @@
 <?php
+
 namespace Aleedhillon\MetaTraderClient\Lib;
 
 /**
@@ -109,7 +110,7 @@ class MTUser
      * Add external account to trade account
      * @param int $gateway_id
      * @param string $account
-     * @return MTRetCode
+     * @return MTRetCode|int
      */
     public function ExternalAccountAdd($gateway_id, $account)
     {
@@ -133,7 +134,7 @@ class MTUser
      * @param int $pos
      * @param int $gateway_id
      * @param string $account
-     * @return MTRetCode
+     * @return MTRetCode|int
      */
     public function ExternalAccountUpdate($pos, $gateway_id, $account)
     {
@@ -170,7 +171,7 @@ class MTUser
     /**
      * Update external account to trade account
      * @param int $pos
-     * @return MTRetCode
+     * @return MTRetCode|int
      */
     public function ExternalAccountDelete($pos)
     {
@@ -198,7 +199,7 @@ class MTUser
 
     /**
      * Clear all external accounts
-     * @return MTRetCode
+     * @return MTRetCode|int
      */
     public function ExternalAccountClear()
     {
@@ -227,7 +228,7 @@ class MTUser
      * @param int $pos
      * @param int $gateway_id
      * @param string $account
-     * @return MTRetCode
+     * @return MTRetCode|int
      */
     public function ExternalAccountNext($pos, &$gateway_id, &$account)
     {
@@ -251,7 +252,7 @@ class MTUser
      * Find external account for gateway
      * @param int $gateway_id
      * @param string $account
-     * @return MTRetCode
+     * @return MTRetCode|int
      */
     public function ExternalAccountGet($gateway_id, &$account)
     {
@@ -268,5 +269,4 @@ class MTUser
         }
         return MTRetCode::MT_RET_ERR_NOTFOUND;
     }
-
 }

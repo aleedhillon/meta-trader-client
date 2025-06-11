@@ -1,4 +1,5 @@
 <?php
+
 namespace Aleedhillon\MetaTraderClient\Lib;
 
 //+------------------------------------------------------------------+
@@ -11,45 +12,39 @@ namespace Aleedhillon\MetaTraderClient\Lib;
  */
 class MTTickProtocol
 {
-    private $m_connect; // connection to MT5 server
+    private $connection; // connection to MT5 server
     /**
      * @param MTConnect $connect - connect to MT5 server
      */
     public function __construct($connect)
     {
-        $this->m_connect = $connect;
+        $this->connection = $connect;
     }
     /**
      * Get last ticks
      * @param string $symbol - name symbol
      * @param array(MTTick) $ticks
-     * @return MTRetCode
+     * @return int
      */
     public function TickLast($symbol, &$ticks)
     {
         //--- send request
         $data = array(MTProtocolConsts::WEB_PARAM_SYMBOL => $symbol);
-        if (!$this->m_connect->Send(MTProtocolConsts::WEB_CMD_TICK_LAST, $data)) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'send tick last failed');
+        if (!$this->connection->Send(MTProtocolConsts::WEB_CMD_TICK_LAST, $data)) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- get answer
-        if (($answer = $this->m_connect->Read()) == null) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'answer tick last is empty');
+        if (($answer = $this->connection->Read()) == null) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- parse answer
-        $tick_answer = null;
+        $tickAnswer = null;
 
-        if (($error_code = $this->Parse(MTProtocolConsts::WEB_CMD_TICK_LAST, $answer, $tick_answer)) != MTRetCode::MT_RET_OK) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'parse tick last failed: [' . $error_code . ']' . MTRetCode::GetError($error_code));
-            return $error_code;
+        if (($errorCode = $this->Parse(MTProtocolConsts::WEB_CMD_TICK_LAST, $answer, $tickAnswer)) != MTRetCode::MT_RET_OK) {
+            return $errorCode;
         }
         //--- get object from json
-        $ticks = $tick_answer->GetArrayFromJson();
+        $ticks = $tickAnswer->GetArrayFromJson();
         //---
         return MTRetCode::MT_RET_OK;
     }
@@ -57,35 +52,35 @@ class MTTickProtocol
      * check answer from MetaTrader 5 server
      * @param string $command - command
      * @param string $answer - answer from server
-     * @param  MTTickAnswer $tick_answer
-     * @return MTRetCode
+     * @param  MTTickAnswer $tickAnswer
+     * @return int
      */
-    private function Parse($command, &$answer, &$tick_answer)
+    private function Parse($command, &$answer, &$tickAnswer)
     {
         $pos = 0;
         //--- get command answer
-        $command_real = $this->m_connect->GetCommand($answer, $pos);
-        if ($command_real != $command)
+        $commandReal = $this->connection->GetCommand($answer, $pos);
+        if ($commandReal != $command)
             return MTRetCode::MT_RET_ERR_DATA;
         //---
-        $tick_answer = new MTTickAnswer();
+        $tickAnswer = new MTTickAnswer();
         //--- get param
-        $pos_end = -1;
-        while (($param = $this->m_connect->GetNextParam($answer, $pos, $pos_end)) != null) {
+        $posEnd = -1;
+        while (($param = $this->connection->GetNextParam($answer, $pos, $posEnd)) != null) {
             switch ($param['name']) {
                 case MTProtocolConsts::WEB_PARAM_RETCODE:
-                    $tick_answer->RetCode = $param['value'];
+                    $tickAnswer->RetCode = $param['value'];
                     break;
                 case MTProtocolConsts::WEB_PARAM_TRANS_ID:
-                    $tick_answer->TransId = $param['value'];
+                    $tickAnswer->TransId = $param['value'];
                     break;
             }
         }
         //--- check ret code
-        if (($ret_code = MTConnect::GetRetCode($tick_answer->RetCode)) != MTRetCode::MT_RET_OK)
-            return $ret_code;
+        if (($retCode = MTConnect::GetRetCode($tickAnswer->RetCode)) != MTRetCode::MT_RET_OK)
+            return $retCode;
         //--- get json
-        if (($tick_answer->ConfigJson = $this->m_connect->GetJson($answer, $pos_end)) == null)
+        if (($tickAnswer->ConfigJson = $this->connection->GetJson($answer, $posEnd)) == null)
             return MTRetCode::MT_RET_REPORT_NODATA;
         //---
         return MTRetCode::MT_RET_OK;
@@ -95,67 +90,55 @@ class MTTickProtocol
      * @param string $symbol
      * @param string $group
      * @param array(MTTick) $ticks
-     * @return MTRetCode
+     * @return int
      */
     public function TickLastGroup($symbol, $group, &$ticks)
     {
         //--- send request
         $data = array(MTProtocolConsts::WEB_PARAM_SYMBOL => $symbol, MTProtocolConsts::WEB_PARAM_GROUP => $group);
-        if (!$this->m_connect->Send(MTProtocolConsts::WEB_CMD_TICK_LAST_GROUP, $data)) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'send tick last group failed');
+        if (!$this->connection->Send(MTProtocolConsts::WEB_CMD_TICK_LAST_GROUP, $data)) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- get answer
-        if (($answer = $this->m_connect->Read()) == null) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'answer tick last group is empty');
+        if (($answer = $this->connection->Read()) == null) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- parse answer
-        $tick_answer = null;
+        $tickAnswer = null;
         //---
-        if (($error_code = $this->Parse(MTProtocolConsts::WEB_CMD_TICK_LAST_GROUP, $answer, $tick_answer)) != MTRetCode::MT_RET_OK) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'parse tick last group failed: [' . $error_code . ']' . MTRetCode::GetError($error_code));
-            return $error_code;
+        if (($errorCode = $this->Parse(MTProtocolConsts::WEB_CMD_TICK_LAST_GROUP, $answer, $tickAnswer)) != MTRetCode::MT_RET_OK) {
+            return $errorCode;
         }
         //--- get object from json
-        $ticks = $tick_answer->GetArrayFromJson();
+        $ticks = $tickAnswer->GetArrayFromJson();
         //---
         return MTRetCode::MT_RET_OK;
     }
     /**
      * Get stat ticks
      * @param string $symbol - name symbol
-     * @param array(MTTickStat) $tick_stat
-     * @return MTRetCode
+     * @param array(MTTickStat) $tickStat
+     * @return int
      */
-    public function TickStat($symbol, &$tick_stat)
+    public function TickStat($symbol, &$tickStat)
     {
         //--- send request
         $data = array(MTProtocolConsts::WEB_PARAM_SYMBOL => $symbol);
-        if (!$this->m_connect->Send(MTProtocolConsts::WEB_CMD_TICK_STAT, $data)) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'send tick last failed');
+        if (!$this->connection->Send(MTProtocolConsts::WEB_CMD_TICK_STAT, $data)) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- get answer
-        if (($answer = $this->m_connect->Read()) == null) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'answer tick last is empty');
+        if (($answer = $this->connection->Read()) == null) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- parse answer
-        $tick_answer = null;
+        $tickAnswer = null;
 
-        if (($error_code = $this->ParseTickStat(MTProtocolConsts::WEB_CMD_TICK_STAT, $answer, $tick_answer)) != MTRetCode::MT_RET_OK) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'parse tick last failed: [' . $error_code . ']' . MTRetCode::GetError($error_code));
-            return $error_code;
+        if (($errorCode = $this->ParseTickStat(MTProtocolConsts::WEB_CMD_TICK_STAT, $answer, $tickAnswer)) != MTRetCode::MT_RET_OK) {
+            return $errorCode;
         }
         //--- get object from json
-        $tick_stat = $tick_answer->GetArrayFromJson();
+        $tickStat = $tickAnswer->GetArrayFromJson();
         //---
         return MTRetCode::MT_RET_OK;
     }
@@ -163,35 +146,35 @@ class MTTickProtocol
      * check answer from MetaTrader 5 server
      * @param string $command - command
      * @param string $answer - answer from server
-     * @param  MTTickAnswer $tick_answer
-     * @return MTRetCode
+     * @param  MTTickAnswer $tickAnswer
+     * @return int
      */
-    private function ParseTickStat($command, &$answer, &$tick_answer)
+    private function ParseTickStat($command, &$answer, &$tickAnswer)
     {
         $pos = 0;
         //--- get command answer
-        $command_real = $this->m_connect->GetCommand($answer, $pos);
-        if ($command_real != $command)
+        $commandReal = $this->connection->GetCommand($answer, $pos);
+        if ($commandReal != $command)
             return MTRetCode::MT_RET_ERR_DATA;
         //---
-        $tick_answer = new MTTickStatAnswer();
+        $tickAnswer = new MTTickStatAnswer();
         //--- get param
-        $pos_end = -1;
-        while (($param = $this->m_connect->GetNextParam($answer, $pos, $pos_end)) != null) {
+        $posEnd = -1;
+        while (($param = $this->connection->GetNextParam($answer, $pos, $posEnd)) != null) {
             switch ($param['name']) {
                 case MTProtocolConsts::WEB_PARAM_RETCODE:
-                    $tick_answer->RetCode = $param['value'];
+                    $tickAnswer->RetCode = $param['value'];
                     break;
                 case MTProtocolConsts::WEB_PARAM_TRANS_ID:
-                    $tick_answer->TransId = $param['value'];
+                    $tickAnswer->TransId = $param['value'];
                     break;
             }
         }
         //--- check ret code
-        if (($ret_code = MTConnect::GetRetCode($tick_answer->RetCode)) != MTRetCode::MT_RET_OK)
-            return $ret_code;
+        if (($retCode = MTConnect::GetRetCode($tickAnswer->RetCode)) != MTRetCode::MT_RET_OK)
+            return $retCode;
         //--- get json
-        if (($tick_answer->ConfigJson = $this->m_connect->GetJson($answer, $pos_end)) == null)
+        if (($tickAnswer->ConfigJson = $this->connection->GetJson($answer, $posEnd)) == null)
             return MTRetCode::MT_RET_REPORT_NODATA;
         //---
         return MTRetCode::MT_RET_OK;

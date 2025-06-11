@@ -1,4 +1,5 @@
 <?php
+
 namespace Aleedhillon\MetaTraderClient\Lib;
 
 /**
@@ -8,9 +9,10 @@ class MTCommonGetAnswer
 {
     public $RetCode = '-1';
     public $ConfigJson = '';
+
     /**
      * From json get class MTConCommon
-     * @return MTConTime
+     * @return MTConCommon|null
      */
     public function GetFromJson()
     {

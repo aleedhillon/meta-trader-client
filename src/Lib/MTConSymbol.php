@@ -1,4 +1,5 @@
 <?php
+
 namespace Aleedhillon\MetaTraderClient\Lib;
 
 /**
@@ -478,7 +479,7 @@ class MTConSymbol
     public $SpliceTimeDays;
     /**
      * instant execution flags
-     * @var MTEnInstantFlags
+     * @var int
      */
     public $IEFlags;
     /**
@@ -515,6 +516,80 @@ class MTConSymbol
      * @var int
      */
     public $SubscriptionsDelay;
+
+    // Dynamic properties used for JSON serialization
+    /**
+     * @var mixed
+     */
+    public $MarginLiquidity;
+    /**
+     * @var mixed
+     */
+    public $MarginCurrency;
+    /**
+     * @var mixed
+     */
+    public $MarginInitialBuy;
+    /**
+     * @var mixed
+     */
+    public $MarginInitialSell;
+    /**
+     * @var mixed
+     */
+    public $MarginInitialBuyLimit;
+    /**
+     * @var mixed
+     */
+    public $MarginInitialSellLimit;
+    /**
+     * @var mixed
+     */
+    public $MarginInitialBuyStop;
+    /**
+     * @var mixed
+     */
+    public $MarginInitialSellStop;
+    /**
+     * @var mixed
+     */
+    public $MarginInitialBuyStopLimit;
+    /**
+     * @var mixed
+     */
+    public $MarginInitialSellStopLimit;
+    /**
+     * @var mixed
+     */
+    public $MarginMaintenanceBuy;
+    /**
+     * @var mixed
+     */
+    public $MarginMaintenanceSell;
+    /**
+     * @var mixed
+     */
+    public $MarginMaintenanceBuyLimit;
+    /**
+     * @var mixed
+     */
+    public $MarginMaintenanceSellLimit;
+    /**
+     * @var mixed
+     */
+    public $MarginMaintenanceBuyStop;
+    /**
+     * @var mixed
+     */
+    public $MarginMaintenanceSellStop;
+    /**
+     * @var mixed
+     */
+    public $MarginMaintenanceBuyStopLimit;
+    /**
+     * @var mixed
+     */
+    public $MarginMaintenanceSellStopLimit;
 
     /**
      * Create MTConSymbol with default values
@@ -607,7 +682,7 @@ class MTConSymbol
         $symbol->CFI = "";
         $symbol->Sector = EnSectors::SECTOR_UNDEFINED;
         $symbol->Industry = EnIndustries::INDUSTRY_UNDEFINED;
-        $symbol->Country = "";
+        $symbol->country = "";
         $symbol->SubscriptionsDelay = 15;
         //---
         return $symbol;

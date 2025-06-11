@@ -1,4 +1,5 @@
 <?php
+
 namespace Aleedhillon\MetaTraderClient\Lib;
 
 //+------------------------------------------------------------------+
@@ -32,12 +33,15 @@ class MTUtils
     /**
      * From bytes to hex
      *
-     * @param  array(byte) $bytes
+     * @param  array|string $bytes
      *
      * @return string
      */
     public static function GetHexFromBytes($bytes)
     {
+        if (is_array($bytes)) {
+            return bin2hex(pack('C*', ...$bytes));
+        }
         return bin2hex($bytes);
     }
 

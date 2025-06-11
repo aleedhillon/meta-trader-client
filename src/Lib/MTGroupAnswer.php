@@ -1,4 +1,5 @@
 <?php
+
 namespace Aleedhillon\MetaTraderClient\Lib;
 
 /**
@@ -11,9 +12,9 @@ class MTGroupAnswer
 
     /**
      * From json get class MTConGroup
-     * @return MTConGroup
+     * @return MTConGroup|null
      */
-    public function GetFromJson()
+    public function GetFromJson(): ?MTConGroup
     {
         $obj = MTJson::Decode($this->ConfigJson);
 
@@ -155,7 +156,7 @@ class MTGroupAnswer
      *
      * @return array
      */
-    private function SetMarginRateInitial(&$symbol, $obj)
+    private function SetMarginRateInitial(&$symbol, $obj): void
     {
         $result = MTConSymbol::GetDefaultMarginRate();
         $new = false;

@@ -1,4 +1,5 @@
 <?php
+
 namespace Aleedhillon\MetaTraderClient\Lib;
 
 //+------------------------------------------------------------------+
@@ -11,44 +12,38 @@ namespace Aleedhillon\MetaTraderClient\Lib;
  */
 class MTHistoryProtocol
 {
-    private $m_connect; // connection to MT5 server
+    private $connection; // connection to MT5 server
     /**
      * @param MTConnect $connect - connect to MT5 server
      */
     public function __construct($connect)
     {
-        $this->m_connect = $connect;
+        $this->connection = $connect;
     }
     /**
      * Get dael
      * @param int $ticket - ticket
      * @param MTOrder $history
-     * @return MTRetCode
+     * @return int
      */
     public function HistoryGet($ticket, &$history)
     {
         //--- send request
         $data = array(MTProtocolConsts::WEB_PARAM_TICKET => $ticket);
         //---
-        if (!$this->m_connect->Send(MTProtocolConsts::WEB_CMD_HISTORY_GET, $data)) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'send history get failed');
+        if (!$this->connection->Send(MTProtocolConsts::WEB_CMD_HISTORY_GET, $data)) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- get answer
-        if (($answer = $this->m_connect->Read()) == null) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'answer history get is empty');
+        if (($answer = $this->connection->Read()) == null) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- parse answer
-        if (($error_code = $this->ParseHistory(MTProtocolConsts::WEB_CMD_HISTORY_GET, $answer, $history_answer)) != MTRetCode::MT_RET_OK) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'parse history get failed: [' . $error_code . ']' . MTRetCode::GetError($error_code));
-            return $error_code;
+        if (($errorCode = $this->ParseHistory(MTProtocolConsts::WEB_CMD_HISTORY_GET, $answer, $historyAnswer)) != MTRetCode::MT_RET_OK) {
+            return $errorCode;
         }
         //--- get object from json
-        $history = $history_answer->GetFromJson();
+        $history = $historyAnswer->GetFromJson();
         //---
         return MTRetCode::MT_RET_OK;
     }
@@ -56,32 +51,32 @@ class MTHistoryProtocol
      * check answer from MetaTrader 5 server
      * @param string $command command
      * @param  string $answer answer from server
-     * @param  MTHistoryAnswer $history_answer
-     * @return MTRetCode
+     * @param  MTHistoryAnswer $historyAnswer
+     * @return int
      */
-    private function ParseHistory($command, &$answer, &$history_answer)
+    private function ParseHistory($command, &$answer, &$historyAnswer)
     {
         $pos = 0;
         //--- get command answer
-        $command_real = $this->m_connect->GetCommand($answer, $pos);
-        if ($command_real != $command)
+        $commandReal = $this->connection->GetCommand($answer, $pos);
+        if ($commandReal != $command)
             return MTRetCode::MT_RET_ERR_DATA;
         //---
-        $history_answer = new MTHistoryAnswer();
+        $historyAnswer = new MTHistoryAnswer();
         //--- get param
-        $pos_end = -1;
-        while (($param = $this->m_connect->GetNextParam($answer, $pos, $pos_end)) != null) {
+        $posEnd = -1;
+        while (($param = $this->connection->GetNextParam($answer, $pos, $posEnd)) != null) {
             switch ($param['name']) {
                 case MTProtocolConsts::WEB_PARAM_RETCODE:
-                    $history_answer->RetCode = $param['value'];
+                    $historyAnswer->RetCode = $param['value'];
                     break;
             }
         }
         //--- check ret code
-        if (($ret_code = MTConnect::GetRetCode($history_answer->RetCode)) != MTRetCode::MT_RET_OK)
-            return $ret_code;
+        if (($retCode = MTConnect::GetRetCode($historyAnswer->RetCode)) != MTRetCode::MT_RET_OK)
+            return $retCode;
         //--- get json
-        if (($history_answer->ConfigJson = $this->m_connect->GetJson($answer, $pos_end)) == null)
+        if (($historyAnswer->ConfigJson = $this->connection->GetJson($answer, $posEnd)) == null)
             return MTRetCode::MT_RET_REPORT_NODATA;
         //---
         return MTRetCode::MT_RET_OK;
@@ -89,32 +84,32 @@ class MTHistoryProtocol
     /**
      * check answer from MetaTrader 5 server
      * @param  string $answer - answer from server
-     * @param  MTHistoryPageAnswer $history_answer
-     * @return MTRetCode
+     * @param  MTHistoryPageAnswer $historyAnswer
+     * @return int
      */
-    private function ParseHistoryPage(&$answer, &$history_answer)
+    private function ParseHistoryPage(&$answer, &$historyAnswer)
     {
         $pos = 0;
         //--- get command answer
-        $command_real = $this->m_connect->GetCommand($answer, $pos);
-        if ($command_real != MTProtocolConsts::WEB_CMD_HISTORY_GET_PAGE)
+        $commandReal = $this->connection->GetCommand($answer, $pos);
+        if ($commandReal != MTProtocolConsts::WEB_CMD_HISTORY_GET_PAGE)
             return MTRetCode::MT_RET_ERR_DATA;
         //---
-        $history_answer = new MTHistoryPageAnswer();
+        $historyAnswer = new MTHistoryPageAnswer();
         //--- get param
-        $pos_end = -1;
-        while (($param = $this->m_connect->GetNextParam($answer, $pos, $pos_end)) != null) {
+        $posEnd = -1;
+        while (($param = $this->connection->GetNextParam($answer, $pos, $posEnd)) != null) {
             switch ($param['name']) {
                 case MTProtocolConsts::WEB_PARAM_RETCODE:
-                    $history_answer->RetCode = $param['value'];
+                    $historyAnswer->RetCode = $param['value'];
                     break;
             }
         }
         //--- check ret code
-        if (($ret_code = MTConnect::GetRetCode($history_answer->RetCode)) != MTRetCode::MT_RET_OK)
-            return $ret_code;
+        if (($retCode = MTConnect::GetRetCode($historyAnswer->RetCode)) != MTRetCode::MT_RET_OK)
+            return $retCode;
         //--- get json
-        if (($history_answer->ConfigJson = $this->m_connect->GetJson($answer, $pos_end)) == null)
+        if (($historyAnswer->ConfigJson = $this->connection->GetJson($answer, $posEnd)) == null)
             return MTRetCode::MT_RET_REPORT_NODATA;
         //---
         return MTRetCode::MT_RET_OK;
@@ -125,7 +120,7 @@ class MTHistoryProtocol
      * @param int $from - date from
      * @param int $to - date to
      * @param int $total - count
-     * @return MTRetCode
+     * @return int
      */
     public function HistoryGetTotal($login, $from, $to, &$total)
     {
@@ -135,25 +130,19 @@ class MTHistoryProtocol
             MTProtocolConsts::WEB_PARAM_FROM => $from,
             MTProtocolConsts::WEB_PARAM_TO => $to
         );
-        if (!$this->m_connect->Send(MTProtocolConsts::WEB_CMD_HISTORY_GET_TOTAL, $data)) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'send history get total failed');
+        if (!$this->connection->Send(MTProtocolConsts::WEB_CMD_HISTORY_GET_TOTAL, $data)) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- get answer
-        if (($answer = $this->m_connect->Read()) == null) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'answer history get total is empty');
+        if (($answer = $this->connection->Read()) == null) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- parse answer
-        if (($error_code = $this->ParseHistoryTotal($answer, $history_answer)) != MTRetCode::MT_RET_OK) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'parse history get total failed: [' . $error_code . '] ' . MTRetCode::GetError($error_code));
-            return $error_code;
+        if (($errorCode = $this->ParseHistoryTotal($answer, $historyAnswer)) != MTRetCode::MT_RET_OK) {
+            return $errorCode;
         }
         //--- get total
-        $total = $history_answer->Total;
+        $total = $historyAnswer->Total;
         //---
         return MTRetCode::MT_RET_OK;
     }
@@ -165,66 +154,60 @@ class MTHistoryProtocol
      * @param int $offset - begin records number
      * @param int $total - total records need
      * @param array(MTOrder) $histories
-     * @return MTRetCode
+     * @return int
      */
     public function HistoryGetPage($login, $from, $to, $offset, $total, &$histories)
     {
         //--- send request
         $data = array(MTProtocolConsts::WEB_PARAM_LOGIN => $login, MTProtocolConsts::WEB_PARAM_FROM => $from, MTProtocolConsts::WEB_PARAM_TO => $to, MTProtocolConsts::WEB_PARAM_OFFSET => $offset, MTProtocolConsts::WEB_PARAM_TOTAL => $total);
         //---
-        if (!$this->m_connect->Send(MTProtocolConsts::WEB_CMD_HISTORY_GET_PAGE, $data)) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'send history get page failed');
+        if (!$this->connection->Send(MTProtocolConsts::WEB_CMD_HISTORY_GET_PAGE, $data)) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- get answer
-        if (($answer = $this->m_connect->Read()) == null) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'answer history get page is empty');
+        if (($answer = $this->connection->Read()) == null) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- parse answer
-        if (($error_code = $this->ParseHistoryPage($answer, $history_answer)) != MTRetCode::MT_RET_OK) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'parse history get page failed: [' . $error_code . '] ' . MTRetCode::GetError($error_code));
-            return $error_code;
+        if (($errorCode = $this->ParseHistoryPage($answer, $historyAnswer)) != MTRetCode::MT_RET_OK) {
+            return $errorCode;
         }
         //--- get object from json
-        $histories = $history_answer->GetArrayFromJson();
+        $histories = $historyAnswer->GetArrayFromJson();
         //---
         return MTRetCode::MT_RET_OK;
     }
     /**
      * Check answer from MetaTrader 5 server
      * @param  $answer string server answer
-     * @param  $history_answer MTHistoryTotalAnswer
-     * @return false
+     * @param  $historyAnswer MTHistoryTotalAnswer
+     * @return int
      */
-    private function ParseHistoryTotal(&$answer, &$history_answer)
+    private function ParseHistoryTotal(&$answer, &$historyAnswer)
     {
         $pos = 0;
         //--- get command answer
-        $command = $this->m_connect->GetCommand($answer, $pos);
+        $command = $this->connection->GetCommand($answer, $pos);
         if ($command != MTProtocolConsts::WEB_CMD_HISTORY_GET_TOTAL)
             return MTRetCode::MT_RET_ERR_DATA;
         //---
-        $history_answer = new MTHistoryTotalAnswer();
+        $historyAnswer = new MTHistoryTotalAnswer();
         //--- get param
-        $pos_end = -1;
-        while (($param = $this->m_connect->GetNextParam($answer, $pos, $pos_end)) != null) {
+        $posEnd = -1;
+        while (($param = $this->connection->GetNextParam($answer, $pos, $posEnd)) != null) {
             switch ($param['name']) {
 
                 case MTProtocolConsts::WEB_PARAM_RETCODE:
-                    $history_answer->RetCode = $param['value'];
+                    $historyAnswer->RetCode = $param['value'];
                     break;
                 case MTProtocolConsts::WEB_PARAM_TOTAL:
-                    $history_answer->Total = (int) $param['value'];
+                    $historyAnswer->Total = (int) $param['value'];
                     break;
             }
         }
         //--- check ret code
-        if (($ret_code = MTConnect::GetRetCode($history_answer->RetCode)) != MTRetCode::MT_RET_OK)
-            return $ret_code;
+        if (($retCode = MTConnect::GetRetCode($historyAnswer->RetCode)) != MTRetCode::MT_RET_OK)
+            return $retCode;
         //---
         return MTRetCode::MT_RET_OK;
     }

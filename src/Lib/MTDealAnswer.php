@@ -1,4 +1,5 @@
 <?php
+
 namespace Aleedhillon\MetaTraderClient\Lib;
 
 /**
@@ -10,7 +11,7 @@ class MTDealAnswer
     public $ConfigJson = '';
     /**
      * From json get class MTDeal
-     * @return array(MTDeal)
+     * @return MTDeal|null
      */
     public function GetFromJson()
     {

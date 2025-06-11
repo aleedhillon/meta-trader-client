@@ -1,4 +1,5 @@
 <?php
+
 namespace Aleedhillon\MetaTraderClient\Lib;
 
 //+------------------------------------------------------------------+
@@ -7,138 +8,106 @@ namespace Aleedhillon\MetaTraderClient\Lib;
 //|                                        http://www.metaquotes.net |
 //+------------------------------------------------------------------+
 /**
- * Class for send request time_server, time_get
+ * Class for send request get server time
  */
 class MTTimeProtocol
 {
-    private $m_connect;
+    private $connection;
+
     public function __construct($connect)
     {
-        $this->m_connect = $connect;
+        $this->connection = $connect;
     }
-    /**
-     * Get current server time
-     * @return int
-     */
+
     public function TimeServer()
     {
         //--- send request
-        if (!$this->m_connect->Send(MTProtocolConsts::WEB_CMD_TIME_SERVER, "")) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'send time server failed');
-            return 0;
+        if (!$this->connection->Send(MTProtocolConsts::WEB_CMD_TIME_SERVER, "")) {
+            return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- get answer
-        if (($answer = $this->m_connect->Read()) == null) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'answer time server start is empty');
-            return 0;
+        if (($answer = $this->connection->Read()) == null) {
+            return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- parse answer
-        if (($error_code = $this->ParseTimeServer($answer, $time)) != MTRetCode::MT_RET_OK) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'parse time server failed: [' . $error_code . ']' . MTRetCode::GetError($error_code));
-            return 0;
+        if (($errorCode = $this->ParseTimeServer($answer, $timeAnswer)) != MTRetCode::MT_RET_OK) {
+            return $errorCode;
         }
-        //---
-        return $time->GetUnixTime();
+
+        return $timeAnswer->Time;
     }
-    /**
-     * check answer from MetaTrader 5 server
-     * @param  $answer
-     * @param  $time_answer MTTimeServerAnswer
-     * @return MTRetCode
-     */
-    private function ParseTimeServer(&$answer, &$time_answer)
+
+    private function ParseTimeServer(&$answer, &$timeAnswer)
     {
         $pos = 0;
         //--- get command answer
-        $command = $this->m_connect->GetCommand($answer, $pos);
+        $command = $this->connection->GetCommand($answer, $pos);
         if ($command != MTProtocolConsts::WEB_CMD_TIME_SERVER)
             return MTRetCode::MT_RET_ERR_DATA;
         //---
-        $time_answer = new MTTimeServerAnswer();
+        $timeAnswer = new MTTimeServerAnswer();
         //--- get param
-        $pos_end = -1;
-        while (($param = $this->m_connect->GetNextParam($answer, $pos, $pos_end)) != null) {
+        $posEnd = -1;
+        while (($param = $this->connection->GetNextParam($answer, $pos, $posEnd)) != null) {
             switch ($param['name']) {
                 case MTProtocolConsts::WEB_PARAM_RETCODE:
-                    $time_answer->RetCode = $param['value'];
+                    $timeAnswer->RetCode = $param['value'];
                     break;
                 case MTProtocolConsts::WEB_PARAM_TIME:
-                    $time_answer->Time = $param['value'];
+                    $timeAnswer->Time = (int) $param['value'];
                     break;
             }
         }
         //--- check ret code
-        if (($ret_code = MTConnect::GetRetCode($time_answer->RetCode)) != MTRetCode::MT_RET_OK)
-            return $ret_code;
-        //--- get time
-        if (empty($time_answer->Time) || $time_answer->Time == 'none')
-            return MTRetCode::MT_RET_ERR_PARAMS;
+        if (($retCode = MTConnect::GetRetCode($timeAnswer->RetCode)) != MTRetCode::MT_RET_OK)
+            return $retCode;
         //---
         return MTRetCode::MT_RET_OK;
     }
-    /**
-     * Get time config
-     * @param $time MTConTime
-     * @return MTRetCode
-     */
+
     public function TimeGet(&$time)
     {
         //--- send request
-        if (!$this->m_connect->Send(MTProtocolConsts::WEB_CMD_TIME_GET, "")) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'send time get failed');
+        if (!$this->connection->Send(MTProtocolConsts::WEB_CMD_TIME_GET, "")) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- get answer
-        if (($answer = $this->m_connect->Read()) == null) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'answer time get is empty');
+        if (($answer = $this->connection->Read()) == null) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- parse answer
-        if (($error_code = $this->ParseTimeGet($answer, $time_answer)) != MTRetCode::MT_RET_OK) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'parse time get failed: [' . $error_code . ']' . MTRetCode::GetError($error_code));
-            return $error_code;
+        if (($errorCode = $this->ParseTimeGet($answer, $timeGetAnswer)) != MTRetCode::MT_RET_OK) {
+            return $errorCode;
         }
-        //---
-        $time = $time_answer->GetFromJson();
+        //--- get object from json
+        $time = $timeGetAnswer->GetFromJson();
         //---
         return MTRetCode::MT_RET_OK;
     }
-    /**
-     * check answer from MetaTrader 5 server
-     * @param  $answer
-     * @param  $time_answer MTTimeGetAnswer
-     * @return MTRetCode
-     */
-    private function ParseTimeGet(&$answer, &$time_answer)
+
+    private function ParseTimeGet(&$answer, &$timeAnswer)
     {
         $pos = 0;
         //--- get command answer
-        $command = $this->m_connect->GetCommand($answer, $pos);
+        $command = $this->connection->GetCommand($answer, $pos);
         if ($command != MTProtocolConsts::WEB_CMD_TIME_GET)
             return MTRetCode::MT_RET_ERR_DATA;
         //---
-        $time_answer = new MTTimeGetAnswer();
-
+        $timeAnswer = new MTTimeGetAnswer();
         //--- get param
-        $pos_end = -1;
-        while (($param = $this->m_connect->GetNextParam($answer, $pos, $pos_end)) != null) {
+        $posEnd = -1;
+        while (($param = $this->connection->GetNextParam($answer, $pos, $posEnd)) != null) {
             switch ($param['name']) {
                 case MTProtocolConsts::WEB_PARAM_RETCODE:
-                    $time_answer->RetCode = $param['value'];
+                    $timeAnswer->RetCode = $param['value'];
                     break;
             }
         }
         //--- check ret code
-        if (($ret_code = MTConnect::GetRetCode($time_answer->RetCode)) != MTRetCode::MT_RET_OK)
-            return $ret_code;
+        if (($retCode = MTConnect::GetRetCode($timeAnswer->RetCode)) != MTRetCode::MT_RET_OK)
+            return $retCode;
         //--- get json
-        if (($time_answer->ConfigJson = $this->m_connect->GetJson($answer, $pos_end)) == null)
+        if (($timeAnswer->ConfigJson = $this->connection->GetJson($answer, $pos)) == null)
             return MTRetCode::MT_RET_REPORT_NODATA;
         //---
         return MTRetCode::MT_RET_OK;

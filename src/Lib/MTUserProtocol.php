@@ -1,4 +1,5 @@
 <?php
+
 namespace Aleedhillon\MetaTraderClient\Lib;
 
 //+------------------------------------------------------------------+
@@ -11,45 +12,39 @@ namespace Aleedhillon\MetaTraderClient\Lib;
  */
 class MTUserProtocol
 {
-    private $m_connect; // connection to MT5 server
+    private $connection; // connection to MT5 server
     /**
      * @param $connect MTConnect connect to MT5 server
      */
     public function __construct($connect)
     {
-        $this->m_connect = $connect;
+        $this->connection = $connect;
     }
 
     /**
      * Add new user
      *
      * @param $user     MTUser information about user
-     * @param $new_user MTUser information about user getting from server
+     * @param $newUser MTUser information about user getting from server
      *
-     * @return MTRetCode
+     * @return int
      */
-    public function Add($user, &$new_user)
+    public function Add($user, &$newUser)
     {
         //--- send request
-        if (!$this->m_connect->Send(MTProtocolConsts::WEB_CMD_USER_ADD, $this->GetParamAdd($user))) {
-            if (MTLogger::getIsWriteLog()) if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'send user add failed');
+        if (!$this->connection->Send(MTProtocolConsts::WEB_CMD_USER_ADD, $this->GetParamAdd($user))) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- get answer
-        if (($answer = $this->m_connect->Read()) == null) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'answer user add is empty');
+        if (($answer = $this->connection->Read()) == null) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- parse answer
-        if (($error_code = $this->ParseAddUser($answer, $user_answer)) != MTRetCode::MT_RET_OK) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'parse user add failed: [' . $error_code . ']' . MTRetCode::GetError($error_code));
-            return $error_code;
+        if (($errorCode = $this->ParseAddUser($answer, $userAnswer)) != MTRetCode::MT_RET_OK) {
+            return $errorCode;
         }
         //---
-        $new_user = $user_answer->GetFromJson();
+        $newUser = $userAnswer->GetFromJson();
         return MTRetCode::MT_RET_OK;
     }
 
@@ -57,40 +52,40 @@ class MTUserProtocol
      * Check answer from MetaTrader 5 server
      *
      * @param  $answer      string answer from server
-     * @param  $user_answer MTUserAnswer
+     * @param  $userAnswer MTUserAnswer
      *
-     * @return MTRetCode
+     * @return int
      */
-    private function ParseAddUser(&$answer, &$user_answer)
+    private function ParseAddUser(&$answer, &$userAnswer)
     {
         $pos = 0;
         //--- get command answer
-        $command_real = $this->m_connect->GetCommand($answer, $pos);
-        if ($command_real != MTProtocolConsts::WEB_CMD_USER_ADD)
+        $commandReal = $this->connection->GetCommand($answer, $pos);
+        if ($commandReal != MTProtocolConsts::WEB_CMD_USER_ADD)
             return MTRetCode::MT_RET_ERR_DATA;
         //---
-        $user_answer = new MTUserAnswer();
+        $userAnswer = new MTUserAnswer();
         //--- get param
-        $pos_end = -1;
-        while (($param = $this->m_connect->GetNextParam($answer, $pos, $pos_end)) != null) {
+        $posEnd = -1;
+        while (($param = $this->connection->GetNextParam($answer, $pos, $posEnd)) != null) {
             switch ($param['name']) {
                 case MTProtocolConsts::WEB_PARAM_RETCODE:
-                    $user_answer->RetCode = $param['value'];
+                    $userAnswer->RetCode = $param['value'];
                     break;
                 //---
                 case MTProtocolConsts::WEB_PARAM_LOGIN:
-                    $user_answer->Login = $param['value'];
+                    $userAnswer->Login = $param['value'];
                     break;
             }
         }
         //--- check ret code
-        if (($ret_code = MTConnect::GetRetCode($user_answer->RetCode)) != MTRetCode::MT_RET_OK)
-            return $ret_code;
+        if (($retCode = MTConnect::GetRetCode($userAnswer->RetCode)) != MTRetCode::MT_RET_OK)
+            return $retCode;
         //--- check login
-        if (empty($user_answer->Login))
+        if (empty($userAnswer->Login))
             return MTRetCode::MT_RET_ERR_PARAMS;
         //--- get json
-        if (($user_answer->ConfigJson = $this->m_connect->GetJson($answer, $pos_end)) == null)
+        if (($userAnswer->ConfigJson = $this->connection->GetJson($answer, $posEnd)) == null)
             return MTRetCode::MT_RET_REPORT_NODATA;
         //---
         return MTRetCode::MT_RET_OK;
@@ -101,33 +96,33 @@ class MTUserProtocol
      *
      * @param  $command     string command
      * @param  $answer      string answer from server
-     * @param  $user_answer MTUserAnswer
+     * @param  $userAnswer MTUserAnswer
      *
-     * @return MTRetCode
+     * @return int
      */
-    private function ParseUser($command, &$answer, &$user_answer)
+    private function ParseUser($command, &$answer, &$userAnswer)
     {
         $pos = 0;
         //--- get command answer
-        $command_real = $this->m_connect->GetCommand($answer, $pos);
-        if ($command_real != $command)
+        $commandReal = $this->connection->GetCommand($answer, $pos);
+        if ($commandReal != $command)
             return MTRetCode::MT_RET_ERR_DATA;
         //---
-        $user_answer = new MTUserAnswer();
+        $userAnswer = new MTUserAnswer();
         //--- get param
-        $pos_end = -1;
-        while (($param = $this->m_connect->GetNextParam($answer, $pos, $pos_end)) != null) {
+        $posEnd = -1;
+        while (($param = $this->connection->GetNextParam($answer, $pos, $posEnd)) != null) {
             switch ($param['name']) {
                 case MTProtocolConsts::WEB_PARAM_RETCODE:
-                    $user_answer->RetCode = $param['value'];
+                    $userAnswer->RetCode = $param['value'];
                     break;
             }
         }
         //--- check ret code
-        if (($ret_code = MTConnect::GetRetCode($user_answer->RetCode)) != MTRetCode::MT_RET_OK)
-            return $ret_code;
+        if (($retCode = MTConnect::GetRetCode($userAnswer->RetCode)) != MTRetCode::MT_RET_OK)
+            return $retCode;
         //--- get json
-        if (($user_answer->ConfigJson = $this->m_connect->GetJson($answer, $pos_end)) == null)
+        if (($userAnswer->ConfigJson = $this->connection->GetJson($answer, $posEnd)) == null)
             return MTRetCode::MT_RET_REPORT_NODATA;
         //---
         return MTRetCode::MT_RET_OK;
@@ -137,32 +132,26 @@ class MTUserProtocol
      * Update user
      *
      * @param $user     MTUser information about user
-     * @param $new_user MTUser information about user getting from server
+     * @param $newUser MTUser information about user getting from server
      *
-     * @return MTRetCode
+     * @return int
      */
-    public function Update($user, &$new_user)
+    public function Update($user, &$newUser)
     {
         //--- send request
-        if (!$this->m_connect->Send(MTProtocolConsts::WEB_CMD_USER_UPDATE, $this->GetParamUpdate($user))) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'send user update failed');
+        if (!$this->connection->Send(MTProtocolConsts::WEB_CMD_USER_UPDATE, $this->GetParamUpdate($user))) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- get answer
-        if (($answer = $this->m_connect->Read()) == null) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'answer user update is empty');
+        if (($answer = $this->connection->Read()) == null) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- parse answer
-        if (($error_code = $this->ParseUser(MTProtocolConsts::WEB_CMD_USER_UPDATE, $answer, $user_answer)) != MTRetCode::MT_RET_OK) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'parse user add failed: [' . $error_code . ']' . MTRetCode::GetError($error_code));
-            return $error_code;
+        if (($errorCode = $this->ParseUser(MTProtocolConsts::WEB_CMD_USER_UPDATE, $answer, $userAnswer)) != MTRetCode::MT_RET_OK) {
+            return $errorCode;
         }
         //---
-        $new_user = $user_answer->GetFromJson();
+        $newUser = $userAnswer->GetFromJson();
         //---
         return MTRetCode::MT_RET_OK;
     }
@@ -173,31 +162,25 @@ class MTUserProtocol
      * @param $login int login
      * @param $user  MTUser information about user getting from server
      *
-     * @return MTRetCode
+     * @return int
      */
     public function Get($login, &$user)
     {
         $data = array(MTProtocolConsts::WEB_PARAM_LOGIN => $login);
         //--- send request
-        if (!$this->m_connect->Send(MTProtocolConsts::WEB_CMD_USER_GET, $data)) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'send user get failed');
+        if (!$this->connection->Send(MTProtocolConsts::WEB_CMD_USER_GET, $data)) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- get answer
-        if (($answer = $this->m_connect->Read()) == null) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'answer user get is empty');
+        if (($answer = $this->connection->Read()) == null) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- parse answer
-        if (($error_code = $this->ParseUser(MTProtocolConsts::WEB_CMD_USER_GET, $answer, $user_answer)) != MTRetCode::MT_RET_OK) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'parse user get failed: [' . $error_code . ']' . MTRetCode::GetError($error_code));
-            return $error_code;
+        if (($errorCode = $this->ParseUser(MTProtocolConsts::WEB_CMD_USER_GET, $answer, $userAnswer)) != MTRetCode::MT_RET_OK) {
+            return $errorCode;
         }
         //---
-        $user = $user_answer->GetFromJson();
+        $user = $userAnswer->GetFromJson();
         //---
         return MTRetCode::MT_RET_OK;
     }
@@ -207,29 +190,23 @@ class MTUserProtocol
      *
      * @param $login int login
      *
-     * @return MTRetCode
+     * @return int
      */
     public function Delete($login)
     {
         $login = (int) $login;
         $data = array(MTProtocolConsts::WEB_PARAM_LOGIN => $login);
         //--- send request
-        if (!$this->m_connect->Send(MTProtocolConsts::WEB_CMD_USER_DELETE, $data)) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'send user delete failed');
+        if (!$this->connection->Send(MTProtocolConsts::WEB_CMD_USER_DELETE, $data)) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- get answer
-        if (($answer = $this->m_connect->Read()) == null) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'answer user delete is empty');
+        if (($answer = $this->connection->Read()) == null) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- parse answer
-        if (($error_code = $this->ParseClearCommand(MTProtocolConsts::WEB_CMD_USER_DELETE, $answer)) != MTRetCode::MT_RET_OK) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'parse user delete failed: [' . $error_code . ']' . MTRetCode::GetError($error_code));
-            return $error_code;
+        if (($errorCode = $this->ParseClearCommand(MTProtocolConsts::WEB_CMD_USER_DELETE, $answer)) != MTRetCode::MT_RET_OK) {
+            return $errorCode;
         }
         //---
         return MTRetCode::MT_RET_OK;
@@ -241,29 +218,29 @@ class MTUserProtocol
      * @param  $command string command
      * @param  $answer  string answer from server
      *
-     * @return MTRetCode
+     * @return int
      */
     private function ParseClearCommand($command, &$answer)
     {
         $pos = 0;
         //--- get command answer
-        $command_real = $this->m_connect->GetCommand($answer, $pos);
-        if ($command_real != $command)
+        $commandReal = $this->connection->GetCommand($answer, $pos);
+        if ($commandReal != $command)
             return MTRetCode::MT_RET_ERR_DATA;
         //---
-        $user_answer = new MTUserAnswer();
+        $userAnswer = new MTUserAnswer();
         //--- get param
-        $pos_end = -1;
-        while (($param = $this->m_connect->GetNextParam($answer, $pos, $pos_end)) != null) {
+        $posEnd = -1;
+        while (($param = $this->connection->GetNextParam($answer, $pos, $posEnd)) != null) {
             switch ($param['name']) {
                 case MTProtocolConsts::WEB_PARAM_RETCODE:
-                    $user_answer->RetCode = $param['value'];
+                    $userAnswer->RetCode = $param['value'];
                     break;
             }
         }
         //--- check ret code
-        if (($ret_code = MTConnect::GetRetCode($user_answer->RetCode)) != MTRetCode::MT_RET_OK)
-            return $ret_code;
+        if (($retCode = MTConnect::GetRetCode($userAnswer->RetCode)) != MTRetCode::MT_RET_OK)
+            return $retCode;
         //---
         return MTRetCode::MT_RET_OK;
     }
@@ -275,7 +252,7 @@ class MTUserProtocol
      * @param        $password string
      * @param string $type     WEB_VAL_USER_PASS_MAIN | WEB_VAL_USER_PASS_INVESTOR
      *
-     * @return MTRetCode
+     * @return int
      */
     public function PasswordCheck($login, $password, $type = MTProtocolConsts::WEB_VAL_USER_PASS_MAIN)
     {
@@ -286,22 +263,16 @@ class MTUserProtocol
             MTProtocolConsts::WEB_PARAM_TYPE => $type,
             MTProtocolConsts::WEB_PARAM_PASSWORD => $password
         );
-        if (!$this->m_connect->Send(MTProtocolConsts::WEB_CMD_USER_PASS_CHECK, $data)) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'send user password check failed');
+        if (!$this->connection->Send(MTProtocolConsts::WEB_CMD_USER_PASS_CHECK, $data)) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- get answer
-        if (($answer = $this->m_connect->Read()) == null) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'answer user password check is empty');
+        if (($answer = $this->connection->Read()) == null) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- parse answer
-        if (($error_code = $this->ParseClearCommand(MTProtocolConsts::WEB_CMD_USER_PASS_CHECK, $answer)) != MTRetCode::MT_RET_OK) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'parse user password check failed: [' . $error_code . ']' . MTRetCode::GetError($error_code));
-            return $error_code;
+        if (($errorCode = $this->ParseClearCommand(MTProtocolConsts::WEB_CMD_USER_PASS_CHECK, $answer)) != MTRetCode::MT_RET_OK) {
+            return $errorCode;
         }
         //---
         return MTRetCode::MT_RET_OK;
@@ -311,36 +282,30 @@ class MTUserProtocol
      * user password change
      *
      * @param        $login        int
-     * @param        $new_password string new password
+     * @param        $newPassword string new password
      * @param string $type         WEB_VAL_USER_PASS_MAIN | WEB_VAL_USER_PASS_INVESTOR
      *
-     * @return MTRetCode
+     * @return int
      */
-    public function PasswordChange($login, $new_password, $type = MTProtocolConsts::WEB_VAL_USER_PASS_MAIN)
+    public function PasswordChange($login, $newPassword, $type = MTProtocolConsts::WEB_VAL_USER_PASS_MAIN)
     {
         $login = (int) $login;
         //--- send request
         $data = array(
             MTProtocolConsts::WEB_PARAM_LOGIN => $login,
             MTProtocolConsts::WEB_PARAM_TYPE => $type,
-            MTProtocolConsts::WEB_PARAM_PASSWORD => $new_password
+            MTProtocolConsts::WEB_PARAM_PASSWORD => $newPassword
         );
-        if (!$this->m_connect->Send(MTProtocolConsts::WEB_CMD_USER_PASS_CHANGE, $data)) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'send user password change failed');
+        if (!$this->connection->Send(MTProtocolConsts::WEB_CMD_USER_PASS_CHANGE, $data)) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- get answer
-        if (($answer = $this->m_connect->Read()) == null) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'answer user password change is empty');
+        if (($answer = $this->connection->Read()) == null) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- parse answer
-        if (($error_code = $this->ParseClearCommand(MTProtocolConsts::WEB_CMD_USER_PASS_CHANGE, $answer)) != MTRetCode::MT_RET_OK) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'parse user password change failed: [' . $error_code . ']' . MTRetCode::GetError($error_code));
-            return $error_code;
+        if (($errorCode = $this->ParseClearCommand(MTProtocolConsts::WEB_CMD_USER_PASS_CHANGE, $answer)) != MTRetCode::MT_RET_OK) {
+            return $errorCode;
         }
         //---
         return MTRetCode::MT_RET_OK;
@@ -350,39 +315,33 @@ class MTUserProtocol
      * user deposit change
      *
      * @param $login       int
-     * @param $new_deposit float deposit
+     * @param $newDeposit float deposit
      * @param $comment     string comment
      * @param $type        MTEnDealAction type of balance: DEAL_BALANCE, DEAL_CREDIT, DEAL_CHARGE, DEAL_BONUS
      *
-     * @return MTRetCode
+     * @return int
      */
-    public function DepositChange($login, $new_deposit, $comment, $type)
+    public function DepositChange($login, $newDeposit, $comment, $type)
     {
         $login = (int) $login;
         //--- send request
         $data = array(
             MTProtocolConsts::WEB_PARAM_LOGIN => $login,
             MTProtocolConsts::WEB_PARAM_TYPE => $type,
-            MTProtocolConsts::WEB_PARAM_BALANCE => $new_deposit,
+            MTProtocolConsts::WEB_PARAM_BALANCE => $newDeposit,
             MTProtocolConsts::WEB_PARAM_COMMENT => $comment
         );
         //--
-        if (!$this->m_connect->Send(MTProtocolConsts::WEB_CMD_USER_DEPOSIT_CHANGE, $data)) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'send user deposit change failed');
+        if (!$this->connection->Send(MTProtocolConsts::WEB_CMD_USER_DEPOSIT_CHANGE, $data)) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- get answer
-        if (($answer = $this->m_connect->Read()) == null) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'answer user deposit change is empty');
+        if (($answer = $this->connection->Read()) == null) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- parse answer
-        if (($error_code = $this->ParseClearCommand(MTProtocolConsts::WEB_CMD_USER_DEPOSIT_CHANGE, $answer)) != MTRetCode::MT_RET_OK) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'parse user deposit change failed: [' . $error_code . ']' . MTRetCode::GetError($error_code));
-            return $error_code;
+        if (($errorCode = $this->ParseClearCommand(MTProtocolConsts::WEB_CMD_USER_DEPOSIT_CHANGE, $answer)) != MTRetCode::MT_RET_OK) {
+            return $errorCode;
         }
         //---
         return MTRetCode::MT_RET_OK;
@@ -394,32 +353,26 @@ class MTUserProtocol
      * @param $login   int
      * @param $account MTAccount
      *
-     * @return MTRetCode
+     * @return int
      */
     public function AccountGet($login, &$account)
     {
         $login = (int) $login;
         $data = array(MTProtocolConsts::WEB_PARAM_LOGIN => $login);
         //--- send request
-        if (!$this->m_connect->Send(MTProtocolConsts::WEB_CMD_USER_ACCOUNT_GET, $data)) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'send user account get failed');
+        if (!$this->connection->Send(MTProtocolConsts::WEB_CMD_USER_ACCOUNT_GET, $data)) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- get answer
-        if (($answer = $this->m_connect->Read()) == null) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'answer user account get is empty');
+        if (($answer = $this->connection->Read()) == null) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- parse answer
-        if (($error_code = $this->ParseUserAccount(MTProtocolConsts::WEB_CMD_USER_ACCOUNT_GET, $answer, $user_account)) != MTRetCode::MT_RET_OK) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'parse user account get failed: [' . $error_code . ']' . MTRetCode::GetError($error_code));
-            return $error_code;
+        if (($errorCode = $this->ParseUserAccount(MTProtocolConsts::WEB_CMD_USER_ACCOUNT_GET, $answer, $userAccount)) != MTRetCode::MT_RET_OK) {
+            return $errorCode;
         }
         //---
-        $account = $user_account->GetFromJson();
+        $account = $userAccount->GetFromJson();
         //---
         return MTRetCode::MT_RET_OK;
     }
@@ -429,33 +382,33 @@ class MTUserProtocol
      *
      * @param $command      MTProtocolConsts
      * @param $answer       string
-     * @param $user_account MTUserAccountAnswer
+     * @param $userAccount MTUserAccountAnswer
      *
-     * @return MTRetCode
+     * @return int
      */
-    private function ParseUserAccount($command, $answer, &$user_account)
+    private function ParseUserAccount($command, $answer, &$userAccount)
     {
         $pos = 0;
         //--- get command answer
-        $command_real = $this->m_connect->GetCommand($answer, $pos);
-        if ($command_real != $command)
+        $commandReal = $this->connection->GetCommand($answer, $pos);
+        if ($commandReal != $command)
             return MTRetCode::MT_RET_ERR_DATA;
         //---
-        $user_account = new MTUserAccountAnswer();
+        $userAccount = new MTUserAccountAnswer();
         //--- get param
-        $pos_end = -1;
-        while (($param = $this->m_connect->GetNextParam($answer, $pos, $pos_end)) != null) {
+        $posEnd = -1;
+        while (($param = $this->connection->GetNextParam($answer, $pos, $posEnd)) != null) {
             switch ($param['name']) {
                 case MTProtocolConsts::WEB_PARAM_RETCODE:
-                    $user_account->RetCode = $param['value'];
+                    $userAccount->RetCode = $param['value'];
                     break;
             }
         }
         //--- check ret code
-        if (($ret_code = MTConnect::GetRetCode($user_account->RetCode)) != MTRetCode::MT_RET_OK)
-            return $ret_code;
+        if (($retCode = MTConnect::GetRetCode($userAccount->RetCode)) != MTRetCode::MT_RET_OK)
+            return $retCode;
         //--- get json
-        if (($user_account->ConfigJson = $this->m_connect->GetJson($answer, $pos_end)) == null)
+        if (($userAccount->ConfigJson = $this->connection->GetJson($answer, $posEnd)) == null)
             return MTRetCode::MT_RET_REPORT_NODATA;
         //---
         return MTRetCode::MT_RET_OK;
@@ -467,32 +420,26 @@ class MTUserProtocol
      * @param string     $group
      * @param array(int) $logins
      *
-     * @return MTRetCode
+     * @return int
      */
     public function UserLogins($group, &$logins)
     {
         $data = array(MTProtocolConsts::WEB_PARAM_GROUP => $group);
         //--- send request
-        if (!$this->m_connect->Send(MTProtocolConsts::WEB_CMD_USER_USER_LOGINS, $data)) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'send user logins get failed');
+        if (!$this->connection->Send(MTProtocolConsts::WEB_CMD_USER_USER_LOGINS, $data)) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- get answer
-        if (($answer = $this->m_connect->Read()) == null) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'answer user logins get is empty');
+        if (($answer = $this->connection->Read()) == null) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
-        $user_logins = null;
+        $userLogins = null;
         //--- parse answer
-        if (($error_code = $this->ParseUserLogins($answer, $user_logins)) != MTRetCode::MT_RET_OK) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'parse user logins get failed: [' . $error_code . '] ' . MTRetCode::GetError($error_code));
-            return $error_code;
+        if (($errorCode = $this->ParseUserLogins($answer, $userLogins)) != MTRetCode::MT_RET_OK) {
+            return $errorCode;
         }
         //---
-        $logins = $user_logins->GetFromJson();
+        $logins = $userLogins ? $userLogins->GetFromJson() : [];
         //---
         return MTRetCode::MT_RET_OK;
     }
@@ -501,33 +448,33 @@ class MTUserProtocol
      * parsing answer for command user_logins
      *
      * @param $answer       string
-     * @param $user_account MTUserAccountAnswer
+     * @param $userAccount MTUserAccountAnswer
      *
-     * @return MTRetCode
+     * @return int
      */
-    private function ParseUserLogins($answer, &$user_account)
+    private function ParseUserLogins($answer, &$userAccount)
     {
         $pos = 0;
         //--- get command answer
-        $command_real = $this->m_connect->GetCommand($answer, $pos);
-        if ($command_real != MTProtocolConsts::WEB_CMD_USER_USER_LOGINS)
+        $commandReal = $this->connection->GetCommand($answer, $pos);
+        if ($commandReal != MTProtocolConsts::WEB_CMD_USER_USER_LOGINS)
             return MTRetCode::MT_RET_ERR_DATA;
         //---
-        $user_account = new MTUserLoginsAnswer();
+        $userAccount = new MTUserLoginsAnswer();
         //--- get param
-        $pos_end = -1;
-        while (($param = $this->m_connect->GetNextParam($answer, $pos, $pos_end)) != null) {
+        $posEnd = -1;
+        while (($param = $this->connection->GetNextParam($answer, $pos, $posEnd)) != null) {
             switch ($param['name']) {
                 case MTProtocolConsts::WEB_PARAM_RETCODE:
-                    $user_account->RetCode = $param['value'];
+                    $userAccount->RetCode = $param['value'];
                     break;
             }
         }
         //--- check ret code
-        if (($ret_code = MTConnect::GetRetCode($user_account->RetCode)) != MTRetCode::MT_RET_OK)
-            return $ret_code;
+        if (($retCode = MTConnect::GetRetCode($userAccount->RetCode)) != MTRetCode::MT_RET_OK)
+            return $retCode;
         //--- get json
-        if (($user_account->ConfigJson = $this->m_connect->GetJson($answer, $pos_end)) == null)
+        if (($userAccount->ConfigJson = $this->connection->GetJson($answer, $posEnd)) == null)
             return MTRetCode::MT_RET_REPORT_NODATA;
         //---
         return MTRetCode::MT_RET_OK;
@@ -661,11 +608,11 @@ class MTUserProtocol
     }
 
     /**
-     * Get string of params for sending to MetaTrader 5 server
+     * Get array of params for sending to MetaTrader 5 server
      *
      * @param $user MTUser
      *
-     * @return string
+     * @return array
      */
     private function GetParamAdd($user)
     {
@@ -699,11 +646,11 @@ class MTUserProtocol
     }
 
     /**
-     * Get string of params for sending to MetaTrader 5 server
+     * Get array of params for sending to MetaTrader 5 server
      *
      * @param MTUser $user
      *
-     * @return string
+     * @return array
      */
     private function GetParamUpdate($user)
     {

@@ -1,4 +1,5 @@
 <?php
+
 namespace Aleedhillon\MetaTraderClient\Lib;
 
 //+------------------------------------------------------------------+
@@ -15,12 +16,12 @@ class MTGroupProtocol
      * connection to MetaTrader5 server
      * @var MTConnect
      */
-    private $m_connect;
+    private $connection;
 
     //---
     public function __construct($connect)
     {
-        $this->m_connect = $connect;
+        $this->connection = $connect;
     }
 
     /**
@@ -28,27 +29,21 @@ class MTGroupProtocol
      *
      * @param int $total
      *
-     * @return MTRetCode
+     * @return int
      */
     public function GroupTotal(&$total)
     {
         //--- send request
-        if (!$this->m_connect->Send(MTProtocolConsts::WEB_CMD_GROUP_TOTAL, "")) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'send group total failed');
+        if (!$this->connection->Send(MTProtocolConsts::WEB_CMD_GROUP_TOTAL, "")) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- get answer
-        if (($answer = $this->m_connect->Read()) == null) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'answer group total is empty');
+        if (($answer = $this->connection->Read()) == null) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- parse answer
-        if (($error_code = $this->ParseGroupTotal($answer, $group)) != MTRetCode::MT_RET_OK) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'parse group total failed: [' . $error_code . ']' . MTRetCode::GetError($error_code));
-            return $error_code;
+        if (($errorCode = $this->ParseGroupTotal($answer, $group)) != MTRetCode::MT_RET_OK) {
+            return $errorCode;
         }
         //---
         $total = $group->Total;
@@ -60,34 +55,34 @@ class MTGroupProtocol
      * Check answer from MetaTrader 5 server
      *
      * @param  string             $answer server answer
-     * @param  MTGroupTotalAnswer $group_answer
+     * @param  MTGroupTotalAnswer $groupAnswer
      *
-     * @return MTRetCode
+     * @return int
      */
-    private function ParseGroupTotal(&$answer, &$group_answer)
+    private function ParseGroupTotal(&$answer, &$groupAnswer)
     {
         $pos = 0;
         //--- get command answer
-        $command = $this->m_connect->GetCommand($answer, $pos);
+        $command = $this->connection->GetCommand($answer, $pos);
         if ($command != MTProtocolConsts::WEB_CMD_GROUP_TOTAL)
             return MTRetCode::MT_RET_ERR_DATA;
         //---
-        $group_answer = new MTGroupTotalAnswer();
+        $groupAnswer = new MTGroupTotalAnswer();
         //--- get param
-        $pos_end = -1;
-        while (($param = $this->m_connect->GetNextParam($answer, $pos, $pos_end)) != null) {
+        $posEnd = -1;
+        while (($param = $this->connection->GetNextParam($answer, $pos, $posEnd)) != null) {
             switch ($param['name']) {
                 case MTProtocolConsts::WEB_PARAM_RETCODE:
-                    $group_answer->RetCode = $param['value'];
+                    $groupAnswer->RetCode = $param['value'];
                     break;
                 case MTProtocolConsts::WEB_PARAM_TOTAL:
-                    $group_answer->Total = (int) $param['value'];
+                    $groupAnswer->Total = (int) $param['value'];
                     break;
             }
         }
         //--- check ret code
-        if (($ret_code = MTConnect::GetRetCode($group_answer->RetCode)) != MTRetCode::MT_RET_OK)
-            return $ret_code;
+        if (($retCode = MTConnect::GetRetCode($groupAnswer->RetCode)) != MTRetCode::MT_RET_OK)
+            return $retCode;
         //---
         return MTRetCode::MT_RET_OK;
     }
@@ -96,34 +91,28 @@ class MTGroupProtocol
      * Get group config
      *
      * @param int        $pos - from 0 to total
-     * @param MTConGroup $group_next
+     * @param MTConGroup $groupNext
      *
-     * @return MTRetCode
+     * @return int
      */
-    public function GroupNext($pos, &$group_next)
+    public function GroupNext($pos, &$groupNext)
     {
         $pos = (int) $pos;
         //--- send request
         $data = array(MTProtocolConsts::WEB_PARAM_INDEX => $pos);
-        if (!$this->m_connect->Send(MTProtocolConsts::WEB_CMD_GROUP_NEXT, $data)) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'send group next failed');
+        if (!$this->connection->Send(MTProtocolConsts::WEB_CMD_GROUP_NEXT, $data)) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- get answer
-        if (($answer = $this->m_connect->Read()) == null) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'answer group next is empty');
+        if (($answer = $this->connection->Read()) == null) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- parse answer
-        if (($error_code = $this->ParseGroup(MTProtocolConsts::WEB_CMD_GROUP_NEXT, $answer, $group_answer)) != MTRetCode::MT_RET_OK) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'parse group next failed: [' . $error_code . ']' . MTRetCode::GetError($error_code));
-            return $error_code;
+        if (($errorCode = $this->ParseGroup(MTProtocolConsts::WEB_CMD_GROUP_NEXT, $answer, $groupAnswer)) != MTRetCode::MT_RET_OK) {
+            return $errorCode;
         }
         //--- get object from json
-        $group_next = $group_answer->GetFromJson();
+        $groupNext = $groupAnswer->GetFromJson();
         //---
         return MTRetCode::MT_RET_OK;
     }
@@ -133,33 +122,33 @@ class MTGroupProtocol
      *
      * @param string         $command - command
      * @param  string        $answer  - answer from server
-     * @param  MTGroupAnswer $group_answer
+     * @param  MTGroupAnswer $groupAnswer
      *
-     * @return MTRetCode
+     * @return int
      */
-    private function ParseGroup($command, &$answer, &$group_answer)
+    private function ParseGroup($command, &$answer, &$groupAnswer)
     {
         $pos = 0;
         //--- get command answer
-        $command_real = $this->m_connect->GetCommand($answer, $pos);
-        if ($command_real != $command)
+        $commandReal = $this->connection->GetCommand($answer, $pos);
+        if ($commandReal != $command)
             return MTRetCode::MT_RET_ERR_DATA;
         //---
-        $group_answer = new MTGroupAnswer();
+        $groupAnswer = new MTGroupAnswer();
         //--- get param
-        $pos_end = -1;
-        while (($param = $this->m_connect->GetNextParam($answer, $pos, $pos_end)) != null) {
+        $posEnd = -1;
+        while (($param = $this->connection->GetNextParam($answer, $pos, $posEnd)) != null) {
             switch ($param['name']) {
                 case MTProtocolConsts::WEB_PARAM_RETCODE:
-                    $group_answer->RetCode = $param['value'];
+                    $groupAnswer->RetCode = $param['value'];
                     break;
             }
         }
         //--- check ret code
-        if (($ret_code = MTConnect::GetRetCode($group_answer->RetCode)) != MTRetCode::MT_RET_OK)
-            return $ret_code;
+        if (($retCode = MTConnect::GetRetCode($groupAnswer->RetCode)) != MTRetCode::MT_RET_OK)
+            return $retCode;
         //--- get json
-        if (($group_answer->ConfigJson = $this->m_connect->GetJson($answer, $pos)) == null)
+        if (($groupAnswer->ConfigJson = $this->connection->GetJson($answer, $pos)) == null)
             return MTRetCode::MT_RET_REPORT_NODATA;
         //---
         return MTRetCode::MT_RET_OK;
@@ -169,33 +158,27 @@ class MTGroupProtocol
      * Add symbol
      *
      * @param MTConGroup $group
-     * @param MTConGroup $new_group
+     * @param MTConGroup $newGroup
      *
-     * @return MTRetCode
+     * @return int
      */
-    public function GroupAdd($group, &$new_group)
+    public function GroupAdd($group, &$newGroup)
     {
         $data = array(MTProtocolConsts::WEB_PARAM_BODYTEXT => $this->GetParams($group));
         //--- send request
-        if (!$this->m_connect->Send(MTProtocolConsts::WEB_CMD_GROUP_ADD, $data)) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'send group add failed');
+        if (!$this->connection->Send(MTProtocolConsts::WEB_CMD_GROUP_ADD, $data)) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- get answer
-        if (($answer = $this->m_connect->Read()) == null) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'answer group add is empty');
+        if (($answer = $this->connection->Read()) == null) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- parse answer
-        if (($error_code = $this->ParseGroup(MTProtocolConsts::WEB_CMD_GROUP_ADD, $answer, $group_answer)) != MTRetCode::MT_RET_OK) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'parse group add failed: [' . $error_code . ']' . MTRetCode::GetError($error_code));
-            return $error_code;
+        if (($errorCode = $this->ParseGroup(MTProtocolConsts::WEB_CMD_GROUP_ADD, $answer, $groupAnswer)) != MTRetCode::MT_RET_OK) {
+            return $errorCode;
         }
         //--- get object from json
-        $new_group = $group_answer->GetFromJson();
+        $newGroup = $groupAnswer->GetFromJson();
         //---
         return MTRetCode::MT_RET_OK;
     }
@@ -207,10 +190,16 @@ class MTGroupProtocol
      *
      * @return string - json
      */
-    private function GetParams($group)
+    private function GetParams(?MTConGroup $group): string
     {
+        if ($group === null || !isset($group->Symbols) || empty($group->Symbols)) {
+            return json_encode($group);
+        }
+
         if (!empty($group->Symbols)) {
             foreach ($group->Symbols as &$groupSymbol) {
+                if ($groupSymbol === null || !($groupSymbol instanceof MTConGroupSymbol)) continue;
+
                 if ($groupSymbol->TradeMode == MTConGroupSymbol::DEFAULT_VALUE_UINT)
                     $groupSymbol->TradeMode = 'default';
                 if ($groupSymbol->ExecMode == MTConGroupSymbol::DEFAULT_VALUE_UINT)
@@ -318,7 +307,7 @@ class MTGroupProtocol
      *
      * @param MTConGroupSymbol $groupSymbol
      */
-    private function GetMarginRateInitialForJson(&$groupSymbol)
+    private function GetMarginRateInitialForJson(MTConGroupSymbol &$groupSymbol): void
     {
         //--- set data
         if (!isset($groupSymbol->MarginRateInitial[MTEnMarginRateTypes::MARGIN_RATE_BUY]) || $groupSymbol->MarginRateInitial[MTEnMarginRateTypes::MARGIN_RATE_BUY] == MTConGroupSymbol::DEFAULT_VALUE_DOUBLE)
@@ -367,7 +356,7 @@ class MTGroupProtocol
      *
      * @param MTConGroupSymbol $groupSymbol
      */
-    private function GetMarginRateMaintenanceForJson(&$groupSymbol)
+    private function GetMarginRateMaintenanceForJson(MTConGroupSymbol &$groupSymbol): void
     {
         $result = MTConSymbol::GetDefaultMarginRate();
         //--- set data
@@ -418,32 +407,26 @@ class MTGroupProtocol
      * @param string     $name - group name
      * @param MTConGroup $group
      *
-     * @return MTRetCode
+     * @return int
      */
     public function GroupGet($name, &$group)
     {
         //--- send request
         $data = array(MTProtocolConsts::WEB_PARAM_GROUP => $name);
         //--- send request
-        if (!$this->m_connect->Send(MTProtocolConsts::WEB_CMD_GROUP_GET, $data)) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'send group get by name ' . $name . ' failed');
+        if (!$this->connection->Send(MTProtocolConsts::WEB_CMD_GROUP_GET, $data)) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- get answer
-        if (($answer = $this->m_connect->Read()) == null) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'answer group get is empty');
+        if (($answer = $this->connection->Read()) == null) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- parse answer
-        if (($error_code = $this->ParseGroup(MTProtocolConsts::WEB_CMD_GROUP_GET, $answer, $group_answer)) != MTRetCode::MT_RET_OK) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'parse group get failed: [' . $error_code . ']' . MTRetCode::GetError($error_code));
-            return $error_code;
+        if (($errorCode = $this->ParseGroup(MTProtocolConsts::WEB_CMD_GROUP_GET, $answer, $groupAnswer)) != MTRetCode::MT_RET_OK) {
+            return $errorCode;
         }
         //--- get object from json
-        $group = $group_answer->GetFromJson();
+        $group = $groupAnswer->GetFromJson();
         //---
         return MTRetCode::MT_RET_OK;
     }
@@ -453,28 +436,22 @@ class MTGroupProtocol
      *
      * @param string $name
      *
-     * @return MTRetCode
+     * @return int
      */
     public function GroupDelete($name)
     {
         $data = array(MTProtocolConsts::WEB_PARAM_GROUP => $name);
         //--- send request
-        if (!$this->m_connect->Send(MTProtocolConsts::WEB_CMD_GROUP_DELETE, $data)) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'send group delete failed');
+        if (!$this->connection->Send(MTProtocolConsts::WEB_CMD_GROUP_DELETE, $data)) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- get answer
-        if (($answer = $this->m_connect->Read()) == null) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'answer group delete is empty');
+        if (($answer = $this->connection->Read()) == null) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- parse answer
-        if (($error_code = $this->ParseClearCommand(MTProtocolConsts::WEB_CMD_GROUP_DELETE, $answer)) != MTRetCode::MT_RET_OK) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'parse group delete failed: [' . $error_code . ']' . MTRetCode::GetError($error_code));
-            return $error_code;
+        if (($errorCode = $this->ParseClearCommand(MTProtocolConsts::WEB_CMD_GROUP_DELETE, $answer)) != MTRetCode::MT_RET_OK) {
+            return $errorCode;
         }
         //---
         return MTRetCode::MT_RET_OK;
@@ -486,29 +463,29 @@ class MTGroupProtocol
      * @param  $command string command
      * @param  $answer  string answer from server
      *
-     * @return MTRetCode
+     * @return int
      */
     private function ParseClearCommand($command, &$answer)
     {
         $pos = 0;
         //--- get command answer
-        $command_real = $this->m_connect->GetCommand($answer, $pos);
-        if ($command_real != $command)
+        $commandReal = $this->connection->GetCommand($answer, $pos);
+        if ($commandReal != $command)
             return MTRetCode::MT_RET_ERR_DATA;
         //---
-        $user_answer = new MTGroupAnswer();
+        $userAnswer = new MTGroupAnswer();
         //--- get param
-        $pos_end = -1;
-        while (($param = $this->m_connect->GetNextParam($answer, $pos, $pos_end)) != null) {
+        $posEnd = -1;
+        while (($param = $this->connection->GetNextParam($answer, $pos, $posEnd)) != null) {
             switch ($param['name']) {
                 case MTProtocolConsts::WEB_PARAM_RETCODE:
-                    $user_answer->RetCode = $param['value'];
+                    $userAnswer->RetCode = $param['value'];
                     break;
             }
         }
         //--- check ret code
-        if (($ret_code = MTConnect::GetRetCode($user_answer->RetCode)) != MTRetCode::MT_RET_OK)
-            return $ret_code;
+        if (($retCode = MTConnect::GetRetCode($userAnswer->RetCode)) != MTRetCode::MT_RET_OK)
+            return $retCode;
         //---
         return MTRetCode::MT_RET_OK;
     }

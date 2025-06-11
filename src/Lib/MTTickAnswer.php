@@ -1,4 +1,5 @@
 <?php
+
 namespace Aleedhillon\MetaTraderClient\Lib;
 
 /**
@@ -11,9 +12,9 @@ class MTTickAnswer
     public $ConfigJson = '';
     /**
      * From json get class MTTick
-     * @return array(MTTick)
+     * @return array|null
      */
-    public function GetArrayFromJson()
+    public function GetArrayFromJson(): ?array
     {
         $objects = MTJson::Decode($this->ConfigJson);
         if ($objects == null)
