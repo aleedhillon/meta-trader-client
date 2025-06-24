@@ -1,4 +1,5 @@
 <?php
+
 namespace Aleedhillon\MetaTraderClient\Lib;
 
 //+------------------------------------------------------------------+
@@ -8,24 +9,24 @@ namespace Aleedhillon\MetaTraderClient\Lib;
 //+------------------------------------------------------------------+
 class MTCustomProtocol
 {
-    private $m_connect; // connection to MT5 server
+    private $connection; // connection to MT5 server
     /**
      * @param MTConnect $connect - connect to MT5 server
      */
     public function __construct($connect)
     {
-        $this->m_connect = $connect;
+        $this->connection = $connect;
     }
     /**
      * Send custom command to MT server
      * @param string $command
      * @param array $params
      * @param string $body
-     * @param array $answer_custom
-     * @param string $answer_body
-     * @return MTRetCode
+     * @param array $answerCustom
+     * @param string $answerBody
+     * @return int
      */
-    public function CustomSend($command, $params, $body, &$answer_custom, &$answer_body)
+    public function CustomSend($command, $params, $body, &$answerCustom, &$answerBody)
     {
         //--- send request
         $data = $params;
@@ -36,24 +37,18 @@ class MTCustomProtocol
             $data[MTProtocolConsts::WEB_PARAM_BODYTEXT] = $body;
         }
         //---
-        if (!$this->m_connect->Send($command, $data)) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'send custom command failed');
+        if (!$this->connection->Send($command, $data)) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- get answer
-        if (($answer = $this->m_connect->Read(false, true)) == null) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'answer custom command is empty');
+        if (($answer = $this->connection->Read(false, true)) == null) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- parse answer
-        $trade_answer = null;
+        $tradeAnswer = null;
 
-        if (($error_code = $this->Parse($command, $answer, $answer_custom, $answer_body)) != MTRetCode::MT_RET_OK) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'parse custom command failed: [' . $error_code . ']' . MTRetCode::GetError($error_code));
-            return $error_code;
+        if (($errorCode = $this->Parse($command, $answer, $answerCustom, $answerBody)) != MTRetCode::MT_RET_OK) {
+            return $errorCode;
         }
         //---
         return MTRetCode::MT_RET_OK;
@@ -62,35 +57,35 @@ class MTCustomProtocol
      * check answer from MetaTrader 5 server
      * @param string $command - command from server
      * @param string $answer - answer from server
-     * @param  array $custom_answer
-     * @param  string $answer_body
-     * @return MTRetCode
+     * @param  array $customAnswer
+     * @param  string $answerBody
+     * @return int
      */
-    private function Parse($command, &$answer, &$custom_answer, &$answer_body)
+    private function Parse($command, &$answer, &$customAnswer, &$answerBody)
     {
         $pos = 0;
         //--- get command answer
-        $command_real = $this->m_connect->GetCommand($answer, $pos);
-        if ($command_real != $command)
+        $commandReal = $this->connection->GetCommand($answer, $pos);
+        if ($commandReal != $command)
             return MTRetCode::MT_RET_ERR_DATA;
         //---
-        $custom_answer = array();
+        $customAnswer = array();
         //--- get param
-        $pos_end = -1;
-        $ret_code = -1;
-        while (($param = $this->m_connect->GetNextParam($answer, $pos, $pos_end)) != null) {
+        $posEnd = -1;
+        $retCode = -1;
+        while (($param = $this->connection->GetNextParam($answer, $pos, $posEnd)) != null) {
             switch ($param['name']) {
                 case MTProtocolConsts::WEB_PARAM_RETCODE:
-                    $ret_code = $param['value'];
+                    $retCode = $param['value'];
                     break;
             }
-            $custom_answer[$param['name']] = $param['value'];
+            $customAnswer[$param['name']] = $param['value'];
         }
         //--- get body
-        $answer_body = $this->m_connect->GetBinary($answer);
+        $answerBody = $this->connection->GetBinary($answer);
         //--- check ret code
-        if (($ret_code = MTConnect::GetRetCode($ret_code)) != MTRetCode::MT_RET_OK)
-            return $ret_code;
+        if (($retCode = MTConnect::GetRetCode($retCode)) != MTRetCode::MT_RET_OK)
+            return $retCode;
         //---
         return MTRetCode::MT_RET_OK;
     }

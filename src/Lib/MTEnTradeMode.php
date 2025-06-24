@@ -1,4 +1,5 @@
 <?php
+
 namespace Aleedhillon\MetaTraderClient\Lib;
 
 /**
@@ -20,32 +21,33 @@ class MTEnTradeMode
      *
      * @param $id
      *
-     * @return MTEnTradeMode
+     * @return int|null
      */
-    public static function Get($id)
+    public static function Get($id): ?int
     {
         $id = (int) $id;
         switch ($id) {
             case MTEnTradeMode::TRADE_DISABLED:
                 return MTEnTradeMode::TRADE_DISABLED;
-            //---
+                //---
             case MTEnTradeMode::TRADE_LONGONLY:
                 return MTEnTradeMode::TRADE_LONGONLY;
-            //---
+                //---
             case MTEnTradeMode::TRADE_SHORTONLY:
                 return MTEnTradeMode::TRADE_SHORTONLY;
-            //---
+                //---
             case MTEnTradeMode::TRADE_CLOSEONLY:
                 return MTEnTradeMode::TRADE_CLOSEONLY;
-            //---
+                //---
             case MTEnTradeMode::TRADE_FULL:
                 return MTEnTradeMode::TRADE_FULL;
-            //---
+                //---
             case MTEnTradeMode::TRADE_FIRST:
                 return MTEnTradeMode::TRADE_FIRST;
-            //---
+                //---
             case MTEnTradeMode::TRADE_LAST:
                 return MTEnTradeMode::TRADE_LAST;
         }
+        return null;
     }
 }

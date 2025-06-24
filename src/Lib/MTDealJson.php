@@ -1,4 +1,5 @@
 <?php
+
 namespace Aleedhillon\MetaTraderClient\Lib;
 
 class MTDealJson
@@ -6,7 +7,7 @@ class MTDealJson
     /**
      * Get MTDeal from json object
      * @param object $obj
-     * @return MTDeal
+     * @return MTDeal|null
      */
     public static function GetFromJson($obj)
     {

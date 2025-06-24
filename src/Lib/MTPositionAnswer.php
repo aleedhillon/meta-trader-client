@@ -1,4 +1,5 @@
 <?php
+
 namespace Aleedhillon\MetaTraderClient\Lib;
 
 /**
@@ -10,9 +11,9 @@ class MTPositionAnswer
     public $ConfigJson = '';
     /**
      * From json get class MTPosition
-     * @return array(MTPosition)
+     * @return MTPosition|null
      */
-    public function GetFromJson()
+    public function GetFromJson(): ?MTPosition
     {
         $obj = MTJson::Decode($this->ConfigJson);
         if ($obj == null)

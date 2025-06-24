@@ -1,4 +1,5 @@
 <?php
+
 namespace Aleedhillon\MetaTraderClient\Lib;
 
 //+------------------------------------------------------------------+
@@ -8,13 +9,13 @@ namespace Aleedhillon\MetaTraderClient\Lib;
 //+------------------------------------------------------------------+
 class MTSymbolProtocol
 {
-    private $m_connect; // connection to MT5 server
+    private $connection; // connection to MT5 server
     /**
      * @param MTConnect $connect - connect to MT5 server
      */
     public function __construct($connect)
     {
-        $this->m_connect = $connect;
+        $this->connection = $connect;
     }
 
     /**
@@ -22,27 +23,21 @@ class MTSymbolProtocol
      *
      * @param int $total - total symbols
      *
-     * @return MTRetCode
+     * @return int
      */
     public function SymbolTotal(&$total)
     {
         //--- send request
-        if (!$this->m_connect->Send(MTProtocolConsts::WEB_CMD_SYMBOL_TOTAL, null)) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'send symbol total failed');
+        if (!$this->connection->Send(MTProtocolConsts::WEB_CMD_SYMBOL_TOTAL, null)) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- get answer
-        if (($answer = $this->m_connect->Read()) == null) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'answer symbol total is empty');
+        if (($answer = $this->connection->Read()) == null) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- parse answer
-        if (($error_code = $this->ParseSymbolTotal($answer, $group)) != MTRetCode::MT_RET_OK) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'parse symbol total failed: [' . $error_code . ']' . MTRetCode::GetError($error_code));
-            return $error_code;
+        if (($errorCode = $this->ParseSymbolTotal($answer, $group)) != MTRetCode::MT_RET_OK) {
+            return $errorCode;
         }
         //---
         $total = $group->Total;
@@ -53,34 +48,34 @@ class MTSymbolProtocol
      * Check answer from MetaTrader 5 server
      *
      * @param  $answer        string server answer
-     * @param  $symbol_answer MTSymbolTotalAnswer
+     * @param  $symbolAnswer MTSymbolTotalAnswer
      *
-     * @return false
+     * @return int
      */
-    private function ParseSymbolTotal(&$answer, &$symbol_answer)
+    private function ParseSymbolTotal(&$answer, &$symbolAnswer)
     {
         $pos = 0;
         //--- get command answer
-        $command = $this->m_connect->GetCommand($answer, $pos);
+        $command = $this->connection->GetCommand($answer, $pos);
         if ($command != MTProtocolConsts::WEB_CMD_SYMBOL_TOTAL)
             return MTRetCode::MT_RET_ERR_DATA;
         //---
-        $symbol_answer = new MTSymbolTotalAnswer();
+        $symbolAnswer = new MTSymbolTotalAnswer();
         //--- get param
-        $pos_end = -1;
-        while (($param = $this->m_connect->GetNextParam($answer, $pos, $pos_end)) != null) {
+        $posEnd = -1;
+        while (($param = $this->connection->GetNextParam($answer, $pos, $posEnd)) != null) {
             switch ($param['name']) {
                 case MTProtocolConsts::WEB_PARAM_RETCODE:
-                    $symbol_answer->RetCode = $param['value'];
+                    $symbolAnswer->RetCode = $param['value'];
                     break;
                 case MTProtocolConsts::WEB_PARAM_TOTAL:
-                    $symbol_answer->Total = (int) $param['value'];
+                    $symbolAnswer->Total = (int) $param['value'];
                     break;
             }
         }
         //--- check ret code
-        if (($ret_code = MTConnect::GetRetCode($symbol_answer->RetCode)) != MTRetCode::MT_RET_OK)
-            return $ret_code;
+        if (($retCode = MTConnect::GetRetCode($symbolAnswer->RetCode)) != MTRetCode::MT_RET_OK)
+            return $retCode;
         //---
         return MTRetCode::MT_RET_OK;
     }
@@ -89,34 +84,28 @@ class MTSymbolProtocol
      * Get symbol config
      *
      * @param $pos         int from 0 to total
-     * @param $symbol_next MTConSymbol
+     * @param $symbolNext MTConSymbol
      *
-     * @return MTRetCode
+     * @return int
      */
-    public function SymbolNext($pos, &$symbol_next)
+    public function SymbolNext($pos, &$symbolNext)
     {
         $pos = (int) $pos;
         //--- send request
         $data = array(MTProtocolConsts::WEB_PARAM_INDEX => $pos);
-        if (!$this->m_connect->Send(MTProtocolConsts::WEB_CMD_SYMBOL_NEXT, $data)) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'send symbol next failed');
+        if (!$this->connection->Send(MTProtocolConsts::WEB_CMD_SYMBOL_NEXT, $data)) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- get answer
-        if (($answer = $this->m_connect->Read()) == null) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'answer symbol next is empty');
+        if (($answer = $this->connection->Read()) == null) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- parse answer
-        if (($error_code = $this->ParseSymbol(MTProtocolConsts::WEB_CMD_SYMBOL_NEXT, $answer, $symbol_answer)) != MTRetCode::MT_RET_OK) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'parse symbol next failed: [' . $error_code . ']' . MTRetCode::GetError($error_code));
-            return $error_code;
+        if (($errorCode = $this->ParseSymbol(MTProtocolConsts::WEB_CMD_SYMBOL_NEXT, $answer, $symbolAnswer)) != MTRetCode::MT_RET_OK) {
+            return $errorCode;
         }
         //--- get object from json
-        $symbol_next = $symbol_answer->GetFromJson();
+        $symbolNext = $symbolAnswer->GetFromJson();
         //---
         return MTRetCode::MT_RET_OK;
     }
@@ -126,33 +115,33 @@ class MTSymbolProtocol
      *
      * @param  $command       string command
      * @param  $answer        string answer from server
-     * @param  $symbol_answer MTSymbolAnswer
+     * @param  $symbolAnswer MTSymbolAnswer
      *
-     * @return MTRetCode
+     * @return int
      */
-    private function ParseSymbol($command, &$answer, &$symbol_answer)
+    private function ParseSymbol($command, &$answer, &$symbolAnswer)
     {
         $pos = 0;
         //--- get command answer
-        $command_real = $this->m_connect->GetCommand($answer, $pos);
-        if ($command_real != $command)
+        $commandReal = $this->connection->GetCommand($answer, $pos);
+        if ($commandReal != $command)
             return MTRetCode::MT_RET_ERR_DATA;
         //---
-        $symbol_answer = new MTSymbolAnswer();
+        $symbolAnswer = new MTSymbolAnswer();
         //--- get param
-        $pos_end = -1;
-        while (($param = $this->m_connect->GetNextParam($answer, $pos, $pos_end)) != null) {
+        $posEnd = -1;
+        while (($param = $this->connection->GetNextParam($answer, $pos, $posEnd)) != null) {
             switch ($param['name']) {
                 case MTProtocolConsts::WEB_PARAM_RETCODE:
-                    $symbol_answer->RetCode = $param['value'];
+                    $symbolAnswer->RetCode = $param['value'];
                     break;
             }
         }
         //--- check ret code
-        if (($ret_code = MTConnect::GetRetCode($symbol_answer->RetCode)) != MTRetCode::MT_RET_OK)
-            return $ret_code;
+        if (($retCode = MTConnect::GetRetCode($symbolAnswer->RetCode)) != MTRetCode::MT_RET_OK)
+            return $retCode;
         //--- get json
-        if (($symbol_answer->ConfigJson = $this->m_connect->GetJson($answer, $pos_end)) == null)
+        if (($symbolAnswer->ConfigJson = $this->connection->GetJson($answer, $posEnd)) == null)
             return MTRetCode::MT_RET_REPORT_NODATA;
         //---
         return MTRetCode::MT_RET_OK;
@@ -164,31 +153,25 @@ class MTSymbolProtocol
      * @param $name   string - symbol name
      * @param $symbol MTConSymbol
      *
-     * @return MTRetCode
+     * @return int
      */
     public function SymbolGet($name, &$symbol)
     {
         //--- send request
         $data = array(MTProtocolConsts::WEB_PARAM_SYMBOL => $name);
-        if (!$this->m_connect->Send(MTProtocolConsts::WEB_CMD_SYMBOL_GET, $data)) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'send symbol get failed');
+        if (!$this->connection->Send(MTProtocolConsts::WEB_CMD_SYMBOL_GET, $data)) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- get answer
-        if (($answer = $this->m_connect->Read()) == null) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'answer symbol get is empty');
+        if (($answer = $this->connection->Read()) == null) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- parse answer
-        if (($error_code = $this->ParseSymbol(MTProtocolConsts::WEB_CMD_SYMBOL_GET, $answer, $symbol_answer)) != MTRetCode::MT_RET_OK) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'parse symbol get failed: [' . $error_code . ']' . MTRetCode::GetError($error_code));
-            return $error_code;
+        if (($errorCode = $this->ParseSymbol(MTProtocolConsts::WEB_CMD_SYMBOL_GET, $answer, $symbolAnswer)) != MTRetCode::MT_RET_OK) {
+            return $errorCode;
         }
         //--- get object from json
-        $symbol = $symbol_answer->GetFromJson();
+        $symbol = $symbolAnswer->GetFromJson();
         //---
         return MTRetCode::MT_RET_OK;
     }
@@ -200,7 +183,7 @@ class MTSymbolProtocol
      * @param $group  string - group name
      * @param $symbol MTConSymbol
      *
-     * @return MTRetCode
+     * @return int
      */
     public function SymbolGetGroup($name, $group, &$symbol)
     {
@@ -209,25 +192,19 @@ class MTSymbolProtocol
             MTProtocolConsts::WEB_PARAM_GROUP => $group
         );
         //--- send request
-        if (!$this->m_connect->Send(MTProtocolConsts::WEB_CMD_SYMBOL_GET_GROUP, $data)) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'send symbol get group failed');
+        if (!$this->connection->Send(MTProtocolConsts::WEB_CMD_SYMBOL_GET_GROUP, $data)) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- get answer
-        if (($answer = $this->m_connect->Read()) == null) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'answer symbol get group is empty');
+        if (($answer = $this->connection->Read()) == null) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- parse answer
-        if (($error_code = $this->ParseSymbol(MTProtocolConsts::WEB_CMD_SYMBOL_GET_GROUP, $answer, $symbol_answer)) != MTRetCode::MT_RET_OK) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'parse symbol get group failed: [' . $error_code . ']' . MTRetCode::GetError($error_code));
-            return $error_code;
+        if (($errorCode = $this->ParseSymbol(MTProtocolConsts::WEB_CMD_SYMBOL_GET_GROUP, $answer, $symbolAnswer)) != MTRetCode::MT_RET_OK) {
+            return $errorCode;
         }
         //--- get object from json
-        $symbol = $symbol_answer->GetFromJson();
+        $symbol = $symbolAnswer->GetFromJson();
         //---
         return MTRetCode::MT_RET_OK;
     }
@@ -236,33 +213,27 @@ class MTSymbolProtocol
      * Add symbol
      *
      * @param MTConSymbol $symbol
-     * @param MTConSymbol $new_symbol
+     * @param MTConSymbol $newSymbol
      *
-     * @return MTRetCode
+     * @return int
      */
-    public function SymbolAdd($symbol, &$new_symbol)
+    public function SymbolAdd($symbol, &$newSymbol)
     {
         $data = array(MTProtocolConsts::WEB_PARAM_BODYTEXT => $this->GetSymbolParams($symbol));
         //--- send request
-        if (!$this->m_connect->Send(MTProtocolConsts::WEB_CMD_SYMBOL_ADD, $data)) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'send symbol add failed');
+        if (!$this->connection->Send(MTProtocolConsts::WEB_CMD_SYMBOL_ADD, $data)) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- get answer
-        if (($answer = $this->m_connect->Read()) == null) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'answer symbol add is empty');
+        if (($answer = $this->connection->Read()) == null) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- parse answer
-        if (($error_code = $this->ParseSymbol(MTProtocolConsts::WEB_CMD_SYMBOL_ADD, $answer, $symbol_answer)) != MTRetCode::MT_RET_OK) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'parse symbol add failed: [' . $error_code . ']' . MTRetCode::GetError($error_code));
-            return $error_code;
+        if (($errorCode = $this->ParseSymbol(MTProtocolConsts::WEB_CMD_SYMBOL_ADD, $answer, $symbolAnswer)) != MTRetCode::MT_RET_OK) {
+            return $errorCode;
         }
         //--- get object from json
-        $new_symbol = $symbol_answer->GetFromJson();
+        $newSymbol = $symbolAnswer->GetFromJson();
         //---
         return MTRetCode::MT_RET_OK;
     }
@@ -272,28 +243,22 @@ class MTSymbolProtocol
      *
      * @param string $name
      *
-     * @return MTRetCode
+     * @return int
      */
     public function SymbolDelete($name)
     {
         $data = array(MTProtocolConsts::WEB_PARAM_SYMBOL => $name);
         //--- send request
-        if (!$this->m_connect->Send(MTProtocolConsts::WEB_CMD_SYMBOL_DELETE, $data)) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'send symbol delete failed');
+        if (!$this->connection->Send(MTProtocolConsts::WEB_CMD_SYMBOL_DELETE, $data)) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- get answer
-        if (($answer = $this->m_connect->Read()) == null) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'answer symbol delete is empty');
+        if (($answer = $this->connection->Read()) == null) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- parse answer
-        if (($error_code = $this->ParseClearCommand(MTProtocolConsts::WEB_CMD_SYMBOL_DELETE, $answer)) != MTRetCode::MT_RET_OK) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'parse symbol delete failed: [' . $error_code . ']' . MTRetCode::GetError($error_code));
-            return $error_code;
+        if (($errorCode = $this->ParseClearCommand(MTProtocolConsts::WEB_CMD_SYMBOL_DELETE, $answer)) != MTRetCode::MT_RET_OK) {
+            return $errorCode;
         }
         //---
         return MTRetCode::MT_RET_OK;
@@ -305,29 +270,29 @@ class MTSymbolProtocol
      * @param  $command string command
      * @param  $answer  string answer from server
      *
-     * @return MTRetCode
+     * @return int
      */
     private function ParseClearCommand($command, &$answer)
     {
         $pos = 0;
         //--- get command answer
-        $command_real = $this->m_connect->GetCommand($answer, $pos);
-        if ($command_real != $command)
+        $commandReal = $this->connection->GetCommand($answer, $pos);
+        if ($commandReal != $command)
             return MTRetCode::MT_RET_ERR_DATA;
         //---
-        $user_answer = new MTSymbolAnswer();
+        $symbolAnswer = new MTSymbolAnswer();
         //--- get param
-        $pos_end = -1;
-        while (($param = $this->m_connect->GetNextParam($answer, $pos, $pos_end)) != null) {
+        $posEnd = -1;
+        while (($param = $this->connection->GetNextParam($answer, $pos, $posEnd)) != null) {
             switch ($param['name']) {
                 case MTProtocolConsts::WEB_PARAM_RETCODE:
-                    $user_answer->RetCode = $param['value'];
+                    $symbolAnswer->RetCode = $param['value'];
                     break;
             }
         }
         //--- check ret code
-        if (($ret_code = MTConnect::GetRetCode($user_answer->RetCode)) != MTRetCode::MT_RET_OK)
-            return $ret_code;
+        if (($retCode = MTConnect::GetRetCode($symbolAnswer->RetCode)) != MTRetCode::MT_RET_OK)
+            return $retCode;
         //---
         return MTRetCode::MT_RET_OK;
     }
@@ -361,7 +326,7 @@ class MTSymbolProtocol
      * array MarginRateInitial for json
 
      *
-  *@param MTConSymbol $objSymbol
+     *@param MTConSymbol $objSymbol
      */
     private function GetMarginRateInitialForJson(&$objSymbol)
     {

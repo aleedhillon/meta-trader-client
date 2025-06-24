@@ -1,4 +1,5 @@
 <?php
+
 namespace Aleedhillon\MetaTraderClient\Lib;
 
 //+------------------------------------------------------------------+
@@ -11,42 +12,36 @@ namespace Aleedhillon\MetaTraderClient\Lib;
  */
 class MTServer
 {
-    private $m_connect; // connection to MT5 server
+    private $connection; // connection to MT5 server
     /**
      * @param MTConnect $connect - connect to MT5 server
      */
     public function __construct($connect)
     {
-        $this->m_connect = $connect;
+        $this->connection = $connect;
     }
 
     /**
      * Restart server
      *
-     * @return MTRetCode
+     * @return int
      */
-    public function Restart()
+    public function Restart(): int
     {
         //--- send request
 
-        if (!$this->m_connect->Send(MTProtocolConsts::WEB_CMD_SERVER_RESTART, '')) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'send server restart failed');
+        if (!$this->connection->Send(MTProtocolConsts::WEB_CMD_SERVER_RESTART, '')) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- get answer
-        if (($answer = $this->m_connect->Read()) == null) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'answer server restart is empty');
+        if (($answer = $this->connection->Read()) == null) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- parse answer
-        $restart_answer = null;
+        $restartAnswer = null;
         //---
-        if (($error_code = $this->Parse($answer, $restart_answer)) != MTRetCode::MT_RET_OK) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'parse server restart failed: [' . $error_code . ']' . MTRetCode::GetError($error_code));
-            return $error_code;
+        if (($errorCode = $this->Parse($answer, $restartAnswer)) != MTRetCode::MT_RET_OK) {
+            return $errorCode;
         }
         //---
         return MTRetCode::MT_RET_OK;
@@ -56,31 +51,31 @@ class MTServer
      * check answer from MetaTrader 5 server
      *
      * @param string           $answer - answer from server
-     * @param  MTRestartAnswer $restart_answer
+     * @param  MTRestartAnswer $restartAnswer
      *
-     * @return MTRetCode
+     * @return int
      */
-    private function Parse(&$answer, &$restart_answer)
+    private function Parse(&$answer, &$restartAnswer): int
     {
         $pos = 0;
         //--- get command answer
-        $command_real = $this->m_connect->GetCommand($answer, $pos);
-        if ($command_real != MTProtocolConsts::WEB_CMD_SERVER_RESTART)
+        $commandReal = $this->connection->GetCommand($answer, $pos);
+        if ($commandReal != MTProtocolConsts::WEB_CMD_SERVER_RESTART)
             return MTRetCode::MT_RET_ERR_DATA;
         //---
-        $restart_answer = new MTRestartAnswer();
+        $restartAnswer = new MTRestartAnswer();
         //--- get param
-        $pos_end = -1;
-        while (($param = $this->m_connect->GetNextParam($answer, $pos, $pos_end)) != null) {
+        $posEnd = -1;
+        while (($param = $this->connection->GetNextParam($answer, $pos, $posEnd)) != null) {
             switch ($param['name']) {
                 case MTProtocolConsts::WEB_PARAM_RETCODE:
-                    $restart_answer->RetCode = $param['value'];
+                    $restartAnswer->RetCode = $param['value'];
                     break;
             }
         }
         //--- check ret code
-        if (($ret_code = MTConnect::GetRetCode($restart_answer->RetCode)) != MTRetCode::MT_RET_OK)
-            return $ret_code;
+        if (($retCode = MTConnect::GetRetCode($restartAnswer->RetCode)) != MTRetCode::MT_RET_OK)
+            return $retCode;
         //---
         return MTRetCode::MT_RET_OK;
     }

@@ -1,4 +1,5 @@
 <?php
+
 namespace Aleedhillon\MetaTraderClient\Lib;
 
 /**
@@ -11,9 +12,9 @@ class MTSymbolAnswer
 
     /**
      * From json get class MTConSymbol
-     * @return MTConSymbol
+     * @return MTConSymbol|null
      */
-    public function GetFromJson()
+    public function GetFromJson(): ?MTConSymbol
     {
         $obj = MTJson::Decode($this->ConfigJson);
         if ($obj == null)
@@ -170,9 +171,9 @@ class MTSymbolAnswer
             $result->Industry = 0;
         //---
         if (isset($obj->Country))
-            $result->Country = (string) $obj->Country;
+            $result->country = (string) $obj->Country;
         else
-            $result->Country = "";
+            $result->country = "";
         //---
         if (isset($obj->SubscriptionsDelay))
             $result->SubscriptionsDelay = (int) $obj->SubscriptionsDelay;
@@ -191,7 +192,7 @@ class MTSymbolAnswer
      *
      * @return array
      */
-    private function SetMarginRateInitial(&$symbol, $obj)
+    private function SetMarginRateInitial(&$symbol, $obj): void
     {
         $result = MTConSymbol::GetDefaultMarginRate();
         $new = false;
@@ -247,7 +248,7 @@ class MTSymbolAnswer
     /**
      * convert from deprecated values to actual
      */
-    private function OldMarginRateInitialConvert(&$symbol, $obj)
+    private function OldMarginRateInitialConvert(&$symbol, $obj): void
     {
         $result = MTConSymbol::GetDefaultMarginRate();
         $has_limit = false;
@@ -289,7 +290,7 @@ class MTSymbolAnswer
     /**
      * set deprecated values for compatibility
      */
-    private function OldMarginRateInitialSet(&$symbol, $obj)
+    private function OldMarginRateInitialSet(&$symbol, $obj): void
     {
         $symbol->MarginLong = $symbol->MarginRateInitial[MTEnMarginRateTypes::MARGIN_RATE_BUY];
         $symbol->MarginShort = $symbol->MarginRateInitial[MTEnMarginRateTypes::MARGIN_RATE_SELL];

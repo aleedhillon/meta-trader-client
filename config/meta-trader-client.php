@@ -1,6 +1,8 @@
 <?php
 
 return [
+    'agent' => env('MT5_AGENT', 'WebAPI'),
+    'should_crypt' => env('MT5_SHOULD_CRYPT', true),
     'ip' => env('MT5_SERVER_IP'),
     'port' => env('MT5_SERVER_PORT', 443),
     'login' => env('MT5_SERVER_WEB_LOGIN'),

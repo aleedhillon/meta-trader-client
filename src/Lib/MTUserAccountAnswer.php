@@ -13,9 +13,9 @@ class MTUserAccountAnswer
 
     /**
      * From json get class MTUser
-     * @return MTUser
+     * @return MTAccount|null
      */
-    public function GetFromJson()
+    public function GetFromJson(): ?MTAccount
     {
         $obj = MTJson::Decode($this->ConfigJson);
         if ($obj == null)

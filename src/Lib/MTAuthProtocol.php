@@ -1,4 +1,5 @@
 <?php
+
 namespace Aleedhillon\MetaTraderClient\Lib;
 
 //+------------------------------------------------------------------+
@@ -11,91 +12,78 @@ namespace Aleedhillon\MetaTraderClient\Lib;
  */
 class MTAuthProtocol
 {
-    private $m_connect = null;
-    private $m_agent = '';
+    private $connection = null;
+    private $agent = '';
     /**
      * @param MTConnect $connect connection to server
      * @param string $agent - name of agent
-     * @return \MTAuthProtocol
-     *
+     * @return void
      */
     public function __construct($connect, $agent)
     {
-        $this->m_connect = $connect;
-        $this->m_agent = $agent;
+        $this->connection = $connect;
+        $this->agent = $agent;
     }
     /**
      * Authorization on MetaTrader 5 server
      * @param string $login - manager login
      * @param string $password - manager password
-     * @param bool $is_crypt - need crypt connection
-     * @param string $crypt_rand - crypt rand string
-     * @return MTRetCode
+     * @param bool $isCrypt - need crypt connection
+     * @param string $cryptRand - crypt rand string
+     * @return int
      */
-    public function Auth($login, $password, $is_crypt, &$crypt_rand)
+    public function Auth($login, $password, $isCrypt, &$cryptRand)
     {
         //--- send request to mt server
-        if (($error_code = $this->SendAuthStart($login, $is_crypt, $auth_start_answer)) != MTRetCode::MT_RET_OK) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'auth start failed: [' . $error_code . ']' . MTRetCode::GetError($error_code));
-            return $error_code;
+        if (($errorCode = $this->SendAuthStart($login, $isCrypt, $authStartAnswer)) != MTRetCode::MT_RET_OK) {
+            return $errorCode;
         }
         //--- get code from hex string
-        $rand_code = MTUtils::GetFromHex($auth_start_answer->SrvRand);
+        $randCode = MTUtils::GetFromHex($authStartAnswer->SrvRand);
         //--- random string for MT server
-        $random_cli_code = MTUtils::GetRandomHex(16);
+        $randomCliCode = MTUtils::GetRandomHex(16);
         //--- get hash password with random code
-        $hash = MTUtils::GetHashFromPassword($password, $rand_code);
+        $hash = MTUtils::GetHashFromPassword($password, $randCode);
         //--- send answer to server
-        if (($error_code = $this->SendAuthAnswer($hash, $random_cli_code, $auth_answer)) != MTRetCode::MT_RET_OK) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'auth answer failed: [' . $error_code . ']' . MTRetCode::GetError($error_code));
-            return $error_code;
+        if (($errorCode = $this->SendAuthAnswer($hash, $randomCliCode, $authAnswer)) != MTRetCode::MT_RET_OK) {
+            return $errorCode;
         }
         //--- check password with another random code from MT server
-        $hash_password = MTUtils::GetHashFromPassword($password, MTUtils::GetFromHex($random_cli_code));
+        $hashPassword = MTUtils::GetHashFromPassword($password, MTUtils::GetFromHex($randomCliCode));
         //--- check hash of password
-        if ($hash_password != $auth_answer->CliRand) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'server sent incorrect password hash: is:' . $auth_answer->CliRand . ', my: ' . $hash_password);
+        if ($hashPassword != $authAnswer->CliRand) {
             return MTRetCode::MT_RET_AUTH_SERVER_BAD;
         }
         //--- get crypt rand from MT server
-        $crypt_rand = $auth_answer->CryptRand;
+        $cryptRand = $authAnswer->CryptRand;
         //---
         return MTRetCode::MT_RET_OK;
     }
     /**
      * Send AUTH_ANSWER to MT server
      * @param string $hash - password hash
-     * @param string $random_cli_code client random string
-     * @param MTAuthAnswer $auth_answer - result from server
-     * @return MTRetCode
+     * @param string $randomCliCode client random string
+     * @param MTAuthAnswer $authAnswer - result from server
+     * @return int
      */
-    private function SendAuthAnswer($hash, $random_cli_code, &$auth_answer)
+    private function SendAuthAnswer($hash, $randomCliCode, &$authAnswer)
     {
         //--- send first request, with login, webapi version
         $data = array(
             MTProtocolConsts::WEB_PARAM_SRV_RAND_ANSWER => $hash,
-            MTProtocolConsts::WEB_PARAM_CLI_RAND => $random_cli_code
+            MTProtocolConsts::WEB_PARAM_CLI_RAND => $randomCliCode
         );
         //--- send request
-        if (!$this->m_connect->Send(MTProtocolConsts::WEB_CMD_AUTH_ANSWER, $data)) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'send auth answer failed');
+        if (!$this->connection->Send(MTProtocolConsts::WEB_CMD_AUTH_ANSWER, $data)) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- get answer
-        if (($answer = $this->m_connect->Read(true)) == null) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'answer auth answer is empty');
+        if (($answer = $this->connection->Read(true)) == null) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- parse answer
-        if (($error_code = $this->ParseAuthAnswer($answer, $auth_answer, $error)) != MTRetCode::MT_RET_OK) {
-            if (!empty($error)) if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'parse auth answer failed: ' . $error);
-            return $error_code;
+        if (($errorCode = $this->ParseAuthAnswer($answer, $authAnswer, $error)) != MTRetCode::MT_RET_OK) {
+            return $errorCode;
         }
         //--- ok
         return MTRetCode::MT_RET_OK;
@@ -103,38 +91,38 @@ class MTAuthProtocol
     /**
      * check answer from MetaTrader 5 server
      * @param  string $answer
-     * @param  MTAuthStartAnswer $auth_answer
+     * @param  MTAuthStartAnswer $authAnswer
      * @param  string $error
-     * @return MTRetCode
+     * @return int
      */
-    private function ParseAuthStart(&$answer, &$auth_answer, &$error)
+    private function ParseAuthStart(&$answer, &$authAnswer, &$error)
     {
         $pos = 0;
         //--- get command answer
-        $command = $this->m_connect->GetCommand($answer, $pos);
+        $command = $this->connection->GetCommand($answer, $pos);
         if ($command != MTProtocolConsts::WEB_CMD_AUTH_START) {
             $error = 'type answer "' . $command . '" is incorrect, is not ' . MTProtocolConsts::WEB_CMD_AUTH_START;
             return MTRetCode::MT_RET_ERR_DATA;
         }
         //---
-        $auth_answer = new MTAuthStartAnswer();
+        $authAnswer = new MTAuthStartAnswer();
         //--- get param
-        $pos_end = -1;
-        while (($param = $this->m_connect->GetNextParam($answer, $pos, $pos_end)) != null) {
+        $posEnd = -1;
+        while (($param = $this->connection->GetNextParam($answer, $pos, $posEnd)) != null) {
             switch ($param['name']) {
                 case MTProtocolConsts::WEB_PARAM_RETCODE:
-                    $auth_answer->RetCode = $param['value'];
+                    $authAnswer->RetCode = $param['value'];
                     break;
                 case MTProtocolConsts::WEB_PARAM_SRV_RAND:
-                    $auth_answer->SrvRand = $param['value'];
+                    $authAnswer->SrvRand = $param['value'];
                     break;
             }
         }
         //--- check ret code
-        if (($error_code = MTConnect::GetRetCode($auth_answer->RetCode)) != MTRetCode::MT_RET_OK)
-            return $error_code;
+        if (($errorCode = MTConnect::GetRetCode($authAnswer->RetCode)) != MTRetCode::MT_RET_OK)
+            return $errorCode;
         //--- get srv rand
-        if (empty($auth_answer->SrvRand) || $auth_answer->SrvRand == 'none') {
+        if (empty($authAnswer->SrvRand) || $authAnswer->SrvRand == 'none') {
             $error = 'srv rand incorrect';
             return MTRetCode::MT_RET_ERR_PARAMS;
         }
@@ -144,36 +132,32 @@ class MTAuthProtocol
     /**
      * Send auth_start request
      * @param string $login  - user login
-     * @param bool $is_crypt - need crypt protocol
-     * @param MTAuthStartAnswer $auth_answer  - answer from server
-     * @return MTRetCode
+     * @param bool $isCrypt - need crypt protocol
+     * @param MTAuthStartAnswer $authAnswer  - answer from server
+     * @return int
      */
-    private function SendAuthStart($login, $is_crypt, &$auth_answer)
+    private function SendAuthStart($login, $isCrypt, &$authAnswer)
     {
         //--- send first request, with login, webapi version
         $data = array(
             MTProtocolConsts::WEB_PARAM_VERSION => WebAPIVersion,
-            MTProtocolConsts::WEB_PARAM_AGENT => $this->m_agent,
+            MTProtocolConsts::WEB_PARAM_AGENT => $this->agent,
             MTProtocolConsts::WEB_PARAM_LOGIN => $login,
             MTProtocolConsts::WEB_PARAM_TYPE => 'MANAGER',
-            MTProtocolConsts::WEB_PARAM_CRYPT_METHOD => $is_crypt
+            MTProtocolConsts::WEB_PARAM_CRYPT_METHOD => $isCrypt
                 ? MTProtocolConsts::WEB_VAL_CRYPT_AES256OFB : MTProtocolConsts::WEB_VAL_CRYPT_NONE
         );
 
         //--- send request
-        if (!$this->m_connect->Send(MTProtocolConsts::WEB_CMD_AUTH_START, $data, true))
+        if (!$this->connection->Send(MTProtocolConsts::WEB_CMD_AUTH_START, $data, true))
             return MTRetCode::MT_RET_ERR_NETWORK;
         //--- get answer
-        if (($answer = $this->m_connect->Read(true)) == null) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'answer auth start is empty');
+        if (($answer = $this->connection->Read(true)) == null) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- parse answer
-        if (($error_code = $this->ParseAuthStart($answer, $auth_answer, $error)) != MTRetCode::MT_RET_OK) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'parse auth start failed: [' . $error_code . ']' . $error);
-            return $error_code;
+        if (($errorCode = $this->ParseAuthStart($answer, $authAnswer, $error)) != MTRetCode::MT_RET_OK) {
+            return $errorCode;
         }
         //---
         return MTRetCode::MT_RET_OK;
@@ -181,44 +165,44 @@ class MTAuthProtocol
     /**
      * Parse answer from request AUTH_ANSWER
      * @param string $answer - answer from server
-     * @param MTAuthAnswer $auth_answer - result
+     * @param MTAuthAnswer $authAnswer - result
      * @param string $error
-     * @return MTRetCode
+     * @return int
      */
-    private function ParseAuthAnswer($answer, &$auth_answer, &$error)
+    private function ParseAuthAnswer($answer, &$authAnswer, &$error)
     {
         $pos = 0;
         //--- get command answer
-        $command = $this->m_connect->GetCommand($answer, $pos);
+        $command = $this->connection->GetCommand($answer, $pos);
         if ($command != MTProtocolConsts::WEB_CMD_AUTH_ANSWER) {
             $error = 'type answer "' . $command . '" is incorrect, is not ' . MTProtocolConsts::WEB_CMD_AUTH_ANSWER;
             return MTRetCode::MT_RET_ERR_DATA;
         }
         //---
-        $auth_answer = new MTAuthAnswer();
+        $authAnswer = new MTAuthAnswer();
         //--- get param
-        $pos_end = -1;
-        while (($param = $this->m_connect->GetNextParam($answer, $pos, $pos_end)) != null) {
+        $posEnd = -1;
+        while (($param = $this->connection->GetNextParam($answer, $pos, $posEnd)) != null) {
             switch ($param['name']) {
                 //--- ret code
                 case MTProtocolConsts::WEB_PARAM_RETCODE:
-                    $auth_answer->RetCode = $param['value'];
+                    $authAnswer->RetCode = $param['value'];
                     break;
                 //--- cli rand
                 case MTProtocolConsts::WEB_PARAM_CLI_RAND_ANSWER:
-                    $auth_answer->CliRand = $param['value'];
+                    $authAnswer->CliRand = $param['value'];
                     break;
                 //--- crypt rand
                 case MTProtocolConsts::WEB_PARAM_CRYPT_RAND:
-                    $auth_answer->CryptRand = $param['value'];
+                    $authAnswer->CryptRand = $param['value'];
                     break;
             }
         }
         //--- check ret code
-        if (($ret_code = MTConnect::GetRetCode($auth_answer->RetCode)) != MTRetCode::MT_RET_OK)
-            return $ret_code;
+        if (($retCode = MTConnect::GetRetCode($authAnswer->RetCode)) != MTRetCode::MT_RET_OK)
+            return $retCode;
         //--- check CliRand
-        if (empty($auth_answer->CliRand) || $auth_answer->CliRand == 'none') {
+        if (empty($authAnswer->CliRand) || $authAnswer->CliRand == 'none') {
             $error = 'cli rand answer incorrect';
             return MTRetCode::MT_RET_ERR_PARAMS;
         }

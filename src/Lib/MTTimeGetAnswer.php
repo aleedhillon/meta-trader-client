@@ -1,4 +1,5 @@
 <?php
+
 namespace Aleedhillon\MetaTraderClient\Lib;
 
 /**
@@ -10,9 +11,9 @@ class MTTimeGetAnswer
     public $ConfigJson = '';
     /**
      * From json get class MTConTime
-     * @return MTConTime
+     * @return MTConTime|null
      */
-    public function GetFromJson()
+    public function GetFromJson(): ?MTConTime
     {
         $obj = MTJson::Decode($this->ConfigJson);
         if ($obj == null)

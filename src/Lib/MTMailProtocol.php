@@ -1,4 +1,5 @@
 <?php
+
 namespace Aleedhillon\MetaTraderClient\Lib;
 
 //+------------------------------------------------------------------+
@@ -11,43 +12,37 @@ namespace Aleedhillon\MetaTraderClient\Lib;
  */
 class MTMailProtocol
 {
-    private $m_connect; // connection to MT5 server
+    private $connection; // connection to MT5 server
     /**
      * @param MTConnect $connect - connect to MT5 server
      */
     public function __construct($connect)
     {
-        $this->m_connect = $connect;
+        $this->connection = $connect;
     }
     /**
      * Send mail to user
      * @param string $to - user login or mask
      * @param string $subject - subject of mail
      * @param string $text - mail text, may be in html format
-     * @return MTRetCode
+     * @return int
      */
     public function MailSend($to, $subject, $text)
     {
         //--- send request
         $data = array(MTProtocolConsts::WEB_PARAM_TO => $to, MTProtocolConsts::WEB_PARAM_SUBJECT => $subject, MTProtocolConsts::WEB_PARAM_BODYTEXT => $text);
-        if (!$this->m_connect->Send(MTProtocolConsts::WEB_CMD_MAIL_SEND, $data)) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'send mail failed');
+        if (!$this->connection->Send(MTProtocolConsts::WEB_CMD_MAIL_SEND, $data)) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- get answer
-        if (($answer = $this->m_connect->Read()) == null) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'answer mail is empty');
+        if (($answer = $this->connection->Read()) == null) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- parse answer
-        $tick_answer = null;
+        $tickAnswer = null;
         //---
-        if (($error_code = $this->Parse($answer)) != MTRetCode::MT_RET_OK) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'parse mail answer failed: [' . $error_code . ']' . MTRetCode::GetError($error_code));
-            return $error_code;
+        if (($errorCode = $this->Parse($answer)) != MTRetCode::MT_RET_OK) {
+            return $errorCode;
         }
         //---
         return MTRetCode::MT_RET_OK;
@@ -55,29 +50,29 @@ class MTMailProtocol
     /**
      * check answer from MetaTrader 5 server
      * @param string $answer - answer from server
-     * @return MTRetCode
+     * @return int
      */
     private function Parse(&$answer)
     {
         $pos = 0;
         //--- get command answer
-        $command_real = $this->m_connect->GetCommand($answer, $pos);
-        if ($command_real != MTProtocolConsts::WEB_CMD_MAIL_SEND)
+        $commandReal = $this->connection->GetCommand($answer, $pos);
+        if ($commandReal != MTProtocolConsts::WEB_CMD_MAIL_SEND)
             return MTRetCode::MT_RET_ERR_DATA;
         //---
-        $mail_answer = new MTMailAnswer();
+        $mailAnswer = new MTMailAnswer();
         //--- get param
-        $pos_end = -1;
-        while (($param = $this->m_connect->GetNextParam($answer, $pos, $pos_end)) != null) {
+        $posEnd = -1;
+        while (($param = $this->connection->GetNextParam($answer, $pos, $posEnd)) != null) {
             switch ($param['name']) {
                 case MTProtocolConsts::WEB_PARAM_RETCODE:
-                    $mail_answer->RetCode = $param['value'];
+                    $mailAnswer->RetCode = $param['value'];
                     break;
             }
         }
         //--- check ret code
-        if (($ret_code = MTConnect::GetRetCode($mail_answer->RetCode)) != MTRetCode::MT_RET_OK)
-            return $ret_code;
+        if (($retCode = MTConnect::GetRetCode($mailAnswer->RetCode)) != MTRetCode::MT_RET_OK)
+            return $retCode;
         //---
         return MTRetCode::MT_RET_OK;
     }

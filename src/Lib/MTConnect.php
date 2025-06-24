@@ -1,4 +1,5 @@
 <?php
+
 namespace Aleedhillon\MetaTraderClient\Lib;
 
 //+------------------------------------------------------------------+
@@ -15,51 +16,51 @@ class MTConnect
     //--- 0-3FFF (0-16383) — client commands.
     const MAX_CLIENT_COMMAND = 16383;
     //--- socket connect
-    private $m_connect = null;
+    private $connection = null;
     //--- ip to mt5 server
-    private $m_ip_mt5 = null;
+    private $ipMt5 = null;
     //--- port o mt5 server
-    private $m_port_mt5 = null;
+    private $portMt5 = null;
     //--- timeout
-    private $m_timeout_connection = 5;
+    private $timeoutConnection = 5;
     //--- crypto random string
-    private $m_crypt_rand = "";
+    private $cryptRand = "";
     //--- crypto array
-    private $crypt_iv = null;
+    private $cryptIv = null;
     //---
-    private $m_aes_out = null;
+    private $aesOut = null;
     //---
-    private $m_aes_in = null;
+    private $aesIn = null;
     /**
      * class crypt aes 256
      * @var MT5CryptAes256
      */
-    private $m_crypt_out = null;
+    private $cryptOut = null;
     //---
-    private $m_crypt_in = null;
+    private $cryptIn = null;
     //--- number of client packet
-    private $m_client_command = 0;
+    private $clientCommand = 0;
 
-    private $is_crypt = false;
+    private $isCrypt = false;
 
     /**
      * Create MetaTrader 5 Web Api class
      *
-     * @param  string $ip_mt5              host or ip for MetaTrader 5 server
-     * @param  int    $port_mt5            port to MetaTrader 5 server
-     * @param  int    $timeout_connection  time out of try connection to MetaTrader 5 server
-     * @param bool    $is_crypt            - need crypt connection
+     * @param  string $ipMt5              host or ip for MetaTrader 5 server
+     * @param  int    $portMt5            port to MetaTrader 5 server
+     * @param  int    $timeoutConnection  time out of try connection to MetaTrader 5 server
+     * @param bool    $isCrypt            - need crypt connection
      *
      * @return MTConnect
      */
-    public function __construct($ip_mt5, $port_mt5, $timeout_connection, $is_crypt)
+    public function __construct($ipMt5, $portMt5, $timeoutConnection, $isCrypt)
     {
-        $this->m_ip_mt5 = $ip_mt5;
-        $this->m_port_mt5 = $port_mt5;
-        $this->m_timeout_connection = $timeout_connection;
+        $this->ipMt5 = $ipMt5;
+        $this->portMt5 = $portMt5;
+        $this->timeoutConnection = $timeoutConnection;
         //-- if need  crypt lets begin
-        $this->is_crypt = $is_crypt;
-        $this->m_client_command = 0;
+        $this->isCrypt = $isCrypt;
+        $this->clientCommand = 0;
     }
 
     /**
@@ -69,40 +70,28 @@ class MTConnect
     private function CreateConnection()
     {
         //--- create socket
-        if (!($this->m_connect = socket_create(AF_INET, SOCK_STREAM, SOL_TCP))) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, "socket create failed, " . $this->GetSocketError());
+        if (!($this->connection = socket_create(AF_INET, SOCK_STREAM, SOL_TCP))) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- try create connection to server
-        if (!socket_connect($this->m_connect, $this->m_ip_mt5, $this->m_port_mt5)) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, "socket connect failed to " . $this->m_ip_mt5 . ":" . $this->m_port_mt5 . ", " . $this->GetSocketError());
+        if (!socket_connect($this->connection, $this->ipMt5, $this->portMt5)) {
             return MTRetCode::MT_RET_ERR_CONNECTION;
         }
         //--- set block connection
-        if (!socket_set_block($this->m_connect)) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, "socket connect failed to " . $this->m_ip_mt5 . ":" . $this->m_port_mt5 . ", " . $this->GetSocketError());
+        if (!socket_set_block($this->connection)) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- select socket and listen to change in it
-        $r = array($this->m_connect);
-        $w = array($this->m_connect);
-        $f = array($this->m_connect);
+        $r = array($this->connection);
+        $w = array($this->connection);
+        $f = array($this->connection);
         //---
-        switch (socket_select($r, $w, $f, $this->m_timeout_connection)) {
+        switch (socket_select($r, $w, $f, $this->timeoutConnection)) {
             case 2:
-                if (MTLogger::getIsWriteLog())
-                    MTLogger::write(MTLoggerType::ERROR, "Connection Refused to " . $this->m_ip_mt5 . ':' . $this->m_port_mt5);
                 return MTRetCode::MT_RET_ERR_CONNECTION;
             case 1:
-                if (MTLogger::getIsWriteLog())
-                    MTLogger::write(MTLoggerType::DEBUG, "Connected to " . $this->m_ip_mt5 . ':' . $this->m_port_mt5);
                 break;
             case 0:
-                if (MTLogger::getIsWriteLog())
-                    MTLogger::write(MTLoggerType::ERROR, "Timeout to " . $this->m_ip_mt5 . ':' . $this->m_port_mt5);
                 return MTRetCode::MT_RET_ERR_TIMEOUT;
         }
         //--- OK
@@ -115,13 +104,13 @@ class MTConnect
      */
     private function GetSocketError()
     {
-        if ($this->m_connect)
-            $errorcode = socket_last_error($this->m_connect);
+        if ($this->connection)
+            $errorCode = socket_last_error($this->connection);
         else
-            $errorcode = socket_last_error();
+            $errorCode = socket_last_error();
         //---
-        $errormsg = socket_strerror($errorcode);
-        return "code: " . $errorcode . ", " . $errormsg;
+        $errorMsg = socket_strerror($errorCode);
+        return "code: " . $errorCode . ", " . $errorMsg;
     }
 
     /**
@@ -130,10 +119,8 @@ class MTConnect
      */
     public function Disconnect()
     {
-        if ($this->m_connect) {
-            socket_close($this->m_connect);
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::DEBUG, "connection to " . $this->m_ip_mt5 . ':' . $this->m_port_mt5 . " closed");
+        if ($this->connection) {
+            socket_close($this->connection);
         }
     }
 
@@ -152,68 +139,62 @@ class MTConnect
      *
      * @param string  $command       - command, for example AUTH_START, AUTH_ANSWER and etc.
      * @param  array $data
-     * @param bool    $first_request bool is ot first
+     * @param bool    $firstRequest bool is ot first
      *
      * @return bool
      */
-    public function Send($command, $data, $first_request = false)
+    public function Send($command, $data, $firstRequest = false)
     {
-        if (!$this->m_connect) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'connection closed');
+        if (!$this->connection) {
             return false;
         }
         //--- number packet
-        $this->m_client_command++;
+        $this->clientCommand++;
         //--- packet max, than first
-        if ($this->m_client_command > self::MAX_CLIENT_COMMAND)
-            $this->m_client_command = 1;
+        if ($this->clientCommand > self::MAX_CLIENT_COMMAND)
+            $this->clientCommand = 1;
         //--- create query
         $q = $command;
         //--- create string for query
         if (!empty($data)) {
-            $body_request = '';
+            $bodyRequest = '';
             $q .= "|";
             foreach ($data as $param => $value) {
                 if ($param == MTProtocolConsts::WEB_PARAM_BODYTEXT) {
-                    $body_request = $value;
+                    $bodyRequest = $value;
                 } else {
                     $q .= $param . '=' . MTUtils::Quotes($value) . '|';
                 }
             }
             $q .= "\r\n";
             //--- add body request
-            if (!empty($body_request))
-                $q .= $body_request;
+            if (!empty($bodyRequest))
+                $q .= $bodyRequest;
         } else
             $q .= "|\r\n";
         //---
-        $query_body = mb_convert_encoding($q, "utf-16le", "utf-8");
+        $queryBody = mb_convert_encoding($q, "utf-16le", "utf-8");
         //--- if need we crypt packet, crypt did not for auth_start and auth_start_answer
-        if ($command != MTProtocolConsts::WEB_CMD_AUTH_START && $command != MTProtocolConsts::WEB_CMD_AUTH_ANSWER && $this->is_crypt) {
-            $query_body = $this->CryptPacket($query_body, strlen($query_body), $len_query);
+        $lenQuery = 0; // Initialize the variable
+        if ($command != MTProtocolConsts::WEB_CMD_AUTH_START && $command != MTProtocolConsts::WEB_CMD_AUTH_ANSWER && $this->isCrypt) {
+            $queryBody = $this->CryptPacket($queryBody, strlen($queryBody), $lenQuery);
         } else
-            $len_query = strlen($query_body);
+            $lenQuery = strlen($queryBody);
 
         //--- send request
-        $query_len = 0;
-        if ($first_request) {
-            $header = sprintf(MTProtocolConsts::WEB_PREFIX_WEBAPI, $len_query, $this->m_client_command);
-            $query = $header . '0' . $query_body;
-            $query_len = strlen($header) + 1 + $len_query;
+        $queryLen = 0;
+        if ($firstRequest) {
+            $header = sprintf(MTProtocolConsts::WEB_PREFIX_WEBAPI, $lenQuery, $this->clientCommand);
+            $query = $header . '0' . $queryBody;
+            $queryLen = strlen($header) + 1 + $lenQuery;
         } else {
-            $header = sprintf(MTProtocolConsts::WEB_PACKET_FORMAT, $len_query, $this->m_client_command);
-            $query = $header . '0' . $query_body;
-            $query_len = strlen($header) + 1 + $len_query;
+            $header = sprintf(MTProtocolConsts::WEB_PACKET_FORMAT, $lenQuery, $this->clientCommand);
+            $query = $header . '0' . $queryBody;
+            $queryLen = strlen($header) + 1 + $lenQuery;
         }
-        //---
-        if (MTLogger::getIsWriteLog())
-            MTLogger::write(MTLoggerType::DEBUG, 'send data: ' . $query . "\r\nlength data: " . $query_len);
         //--- send data to MetaTrader 5 server
-        $send_data = socket_write($this->m_connect, $query, $query_len);
-        if (!$send_data) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::DEBUG, "send data failed, " . $data . "," . $this->GetSocketError());
+        $sendData = socket_write($this->connection, $query, $queryLen);
+        if (!$sendData) {
             return false;
         }
         //---
@@ -223,103 +204,94 @@ class MTConnect
     /**
      * Crypt the packet
      *
-     * @param string   $packet_body
-     * @param int      $len_packet
-     * @param int      $len_crypt_packet
+     * @param string   $packetBody
+     * @param int      $lenPacket
+     * @param int      $lenCryptPacket
      *
-     * @internal param int $len_pack
+     * @internal param int $lenPack
      * @return string|null
      */
-    private function CryptPacket($packet_body, $len_packet, &$len_crypt_packet)
+    private function CryptPacket(string $packetBody, int $lenPacket, int &$lenCryptPacket): ?string
     {
         $result = '';
-        if ($this->m_crypt_out == null) {
-            $key = $this->crypt_iv[0] . $this->crypt_iv[1];
+        if ($this->cryptOut == null) {
+            $key = $this->cryptIv[0] . $this->cryptIv[1];
 
-            $this->m_crypt_out = new MT5CryptAes256(MTUtils::GetFromHex($key), strlen($key) / 2);
+            $this->cryptOut = new MT5CryptAes256(MTUtils::GetFromHex($key), strlen($key) / 2);
             //---
-            $this->m_aes_out = $this->crypt_iv[2];
-            $this->m_aes_out = MTUtils::GetFromHex($this->m_aes_out);
+            $this->aesOut = $this->cryptIv[2];
+            $this->aesOut = MTUtils::GetFromHex($this->aesOut);
         }
 
         //--- check aes
-        if (empty($this->m_aes_out)) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::DEBUG, "packet did not crypt, aes out is empty");
+        if (empty($this->aesOut)) {
             return null;
         }
         //---
-        for ($i = 0, $key = 16; $i < $len_packet; $i++) {
+        for ($i = 0, $key = 16; $i < $lenPacket; $i++) {
             if ($key >= 16) {
                 //--- get new key for xor
-                $this->m_aes_out = $this->m_crypt_out->encryptBlock($this->m_aes_out);
+                $this->aesOut = $this->cryptOut->encryptBlock($this->aesOut);
                 //---  key index is 0
                 $key = 0;
             }
             //--- xor all bytes
-            $result .= chr(ord($packet_body[$i]) ^ ord($this->m_aes_out[$key]));
+            $result .= chr(ord($packetBody[$i]) ^ ord($this->aesOut[$key]));
             $key++;
         }
-        $len_crypt_packet = $i;
-        //---
-        if (MTLogger::getIsWriteLog())
-            MTLogger::write(MTLoggerType::DEBUG, "crypt: '" . $packet_body . "' to '" . $result . "', length: " . $len_crypt_packet);
+        $lenCryptPacket = $i;
         //--- return crypt string
         return $result;
     }
 
     /**
-     * @param array $packet_body
-     * @param int   $len_packet
+     * @param string|null $packetBody
+     * @param int   $lenPacket
      *
      * @return string|null
      */
-    private function DeCryptPacket($packet_body, $len_packet)
+    private function DeCryptPacket(?string $packetBody, int $lenPacket): ?string
     {
-        if ($packet_body == null)
+        if ($packetBody == null)
             return null;
         //---
-        if ($this->m_crypt_in == null) {
-            $key = $this->crypt_iv[0] . $this->crypt_iv[1];
-            $this->m_crypt_in = new MT5CryptAes256(MTUtils::GetFromHex($key), strlen($key) / 2);
+        if ($this->cryptIn == null) {
+            $key = $this->cryptIv[0] . $this->cryptIv[1];
+            $this->cryptIn = new MT5CryptAes256(MTUtils::GetFromHex($key), strlen($key) / 2);
             //--- create aes in array
-            $this->m_aes_in = $this->crypt_iv[3];
-            $this->m_aes_in = MTUtils::GetFromHex($this->m_aes_in);
+            $this->aesIn = $this->cryptIv[3];
+            $this->aesIn = MTUtils::GetFromHex($this->aesIn);
         }
         //---
-        if (empty($this->m_aes_in)) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::DEBUG, "packet did not decrypt, aes in is empty");
+        if (empty($this->aesIn)) {
             return false;
         }
-        $out_result = '';
-        for ($i = 0, $key = 16; $i < $len_packet; $i++) {
+        $outResult = '';
+        for ($i = 0, $key = 16; $i < $lenPacket; $i++) {
             if ($key >= 16) {
                 //--- get new key for xor
-                $this->m_aes_in = $this->m_crypt_in->encryptBlock($this->m_aes_in);
+                $this->aesIn = $this->cryptIn->encryptBlock($this->aesIn);
                 //---
                 $key = 0;
             }
             //--- xor all bytes
-            $out_result .= chr(ord($packet_body[$i]) ^ ord($this->m_aes_in[$key]));
+            $outResult .= chr(ord($packetBody[$i]) ^ ord($this->aesIn[$key]));
             $key++;
         }
-        return $out_result;
+        return $outResult;
     }
 
     /**
      * Get data from MetaTrader 5 server
      *
-     * @param bool $auth_packet wait the auth packet
-     * @param bool $is_binary
+     * @param bool $authPacket wait the auth packet
+     * @param bool $isBinary
      *
      * @return null|string
      */
-    public function Read($auth_packet = false, $is_binary = false)
+    public function Read($authPacket = false, $isBinary = false)
     {
-        if (!$this->m_connect) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'connection closed');
+        if (!$this->connection) {
             return null;
         }
         //---
@@ -332,23 +304,18 @@ class MTConnect
                 break;
             //---
             if ($data == null && $header->SizeBody > 0) {
-                if (MTLogger::getIsWriteLog())
-                    MTLogger::write(MTLoggerType::DEBUG, "read incorrect packet, length " . $header->SizeBody . ", but data is null");
                 break;
             }
             //--- if need decrypt packet do it
-            if ($this->is_crypt && !$auth_packet)
+            if ($this->isCrypt && !$authPacket)
                 $data = $this->DeCryptPacket($data, $header->SizeBody);
             //--- check number of packet
-            if ($header->NumberPacket != $this->m_client_command) {
+            if ($header->NumberPacket != $this->clientCommand) {
                 //--- check packet length
                 if ($header->SizeBody != 0) {
-                    if (MTLogger::getIsWriteLog())
-                        MTLogger::write(MTLoggerType::DEBUG, "number of packet incorrect need: " . $this->m_client_command . ", but get " . $header->NumberPacket);
+                    // packet number mismatch
                 } else {
                     //--- this is PING packet
-                    if (MTLogger::getIsWriteLog())
-                        MTLogger::write(MTLoggerType::DEBUG, "PING packet");
                 }
                 //--- read next packet
                 continue;
@@ -360,15 +327,12 @@ class MTConnect
                 break;
         }
         //--- decoding data
-        if ($is_binary) {
+        if ($isBinary) {
             $pos = strpos($result, "\n");
-            $first_line = substr($result, 0, $pos);
-            $result = mb_convert_encoding($first_line, "utf-8", "utf-16le") . "\r\n" . substr($result, $pos);
+            $firstLine = substr($result, 0, $pos);
+            $result = mb_convert_encoding($firstLine, "utf-8", "utf-16le") . "\r\n" . substr($result, $pos);
         } else
             $result = mb_convert_encoding($result, "utf-8", "utf-16le");
-        //---
-        if (MTLogger::getIsWriteLog())
-            MTLogger::write(MTLoggerType::DEBUG, "result: " . $result);
         //--- return result
         return $result;
     }
@@ -378,61 +342,44 @@ class MTConnect
      *
      * @param MTHeaderProtocol $header
      *
-     * @return void
+     * @return string|null
      */
-    private function ReadPacket(&$header)
+    private function ReadPacket(&$header): ?string
     {
         $header = null;
         //---
-        $count_read = socket_recv($this->m_connect, $header_data, MTHeaderProtocol::HEADER_LENGTH, MSG_WAITALL);
-        //$header_data = socket_read($this->m_connect, MTHeaderProtocol::HEADER_LENGTH, PHP_BINARY_READ);
+        $countRead = socket_recv($this->connection, $headerData, MTHeaderProtocol::HEADER_LENGTH, MSG_WAITALL);
+        //$headerData = socket_read($this->connection, MTHeaderProtocol::HEADER_LENGTH, PHP_BINARY_READ);
         //---
-        if ($count_read != MTHeaderProtocol::HEADER_LENGTH) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'incorrect header read,  ' . $count_read . ' bytes');
+        if ($countRead != MTHeaderProtocol::HEADER_LENGTH) {
             return null;
         }
-        //---
-        if (MTLogger::getIsWriteLog())
-            MTLogger::write(MTLoggerType::DEBUG, 'header:' . $header_data . ' length: ' . $count_read);
         //--- get header from request
-        if (!($header = MTHeaderProtocol::GetHeader($header_data))) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::DEBUG, 'incorrect header data "' . $header_data . '"');
+        if (!($header = MTHeaderProtocol::GetHeader($headerData))) {
             return null;
         }
         //---
-        if (MTLogger::getIsWriteLog())
-            MTLogger::write(MTLoggerType::DEBUG, 'size body: ' . $header->SizeBody . ' number package: ' . $header->NumberPacket . ' flag: ' . $header->Flag);
-        //---
-        $need_len = $header->SizeBody;
-        $read_len = 0;
+        $needLen = $header->SizeBody;
+        $readLen = 0;
         $data = '';
-        $count_packet = 0;
-        while ($read_len < $need_len) {
-            $count_read = socket_recv($this->m_connect, $temp_data, $need_len - $read_len, MSG_WAITALL); //socket_read($this->m_connect, $need_len - $read_len, PHP_BINARY_READ);
+        $countPacket = 0;
+        while ($readLen < $needLen) {
+            $countRead = socket_recv($this->connection, $tempData, $needLen - $readLen, MSG_WAITALL); //socket_read($this->connection, $needLen - $readLen, PHP_BINARY_READ);
             //--- check data
-            if ($temp_data === false) {
-                $error_code = socket_last_error($this->m_connect);
-                $error_msg = socket_strerror($error_code);
-                if (MTLogger::getIsWriteLog())
-                    MTLogger::write(MTLoggerType::DEBUG, 'socket error [' . $error_code . '] ' . $error_msg);
+            if ($tempData === false) {
+                $errorCode = socket_last_error($this->connection);
+                $errorMsg = socket_strerror($errorCode);
                 return null;
             }
             //--- try get all data
-            $data .= $temp_data;
-            $read_len += $count_read;
-            $count_packet++;
+            $data .= $tempData;
+            $readLen += $countRead;
+            $countPacket++;
         }
         //--- check length
-        if ($read_len != $header->SizeBody) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::DEBUG, 'incorrect size of block: ' . $data . "\r\nReal size: " . $read_len . ', Size from header: ' . $header->SizeBody);
+        if ($readLen != $header->SizeBody) {
             return null;
         }
-        //--- log
-        if (MTLogger::getIsWriteLog())
-            MTLogger::write(MTLoggerType::DEBUG, 'read all data ' . $read_len . ' bytes, ' . $count_packet . ' packets');
         //---
         return $data;
     }
@@ -459,26 +406,26 @@ class MTConnect
      *
      * @param string $answer  - answer from server
      * @param int    $pos     - position that begin find
-     * @param int    $pos_end - position of end parametrs
+     * @param int    $posEnd - position of end parametrs
      *
      * @return array|null
      */
-    public function GetNextParam(&$answer, &$pos, &$pos_end)
+    public function GetNextParam(&$answer, &$pos, &$posEnd)
     {
-        if ($pos_end < 0) {
-            $pos_end = mb_strpos($answer, "\r\n", 0, 'UTF-8');
-            if ($pos_end == false)
-                $pos_end = strlen($answer);
+        if ($posEnd < 0) {
+            $posEnd = mb_strpos($answer, "\r\n", 0, 'UTF-8');
+            if ($posEnd == false)
+                $posEnd = strlen($answer);
         }
-        $pos_code = mb_strpos($answer, '|', $pos + 1, 'UTF-8');
+        $posCode = mb_strpos($answer, '|', $pos + 1, 'UTF-8');
         //---
-        if ($pos_code > 0 && $pos_code < $pos_end) {
-            $params_str = mb_substr($answer, $pos + 1, $pos_code - $pos - 1);
-            $params = explode('=', $params_str, 2);
+        if ($posCode > 0 && $posCode < $posEnd) {
+            $paramsStr = mb_substr($answer, $pos + 1, $posCode - $pos - 1);
+            $params = explode('=', $paramsStr, 2);
             if (count($params) < 2)
                 return null;
             //---
-            $pos = $pos_code;
+            $pos = $posCode;
             //---
             return array(
                 'name' => strtoupper($params[0]),
@@ -500,13 +447,13 @@ class MTConnect
     public function GetJson(&$answer, &$pos)
     {
         //--- find json by first {
-        $pos_code = mb_strpos($answer, "\n", $pos, 'UTF-8');
-        if ($pos_code > 0) {
-            $json_str = trim(mb_substr($answer, $pos_code));
+        $posCode = mb_strpos($answer, "\n", $pos, 'UTF-8');
+        if ($posCode > 0) {
+            $jsonStr = trim(mb_substr($answer, $posCode));
             //---
             $pos = strlen($answer);
             //---
-            return $json_str;
+            return $jsonStr;
         }
         //---
         return null;
@@ -522,9 +469,9 @@ class MTConnect
     public function GetBinary(&$answer)
     {
         //--- find binary by first {
-        $pos_code = strpos($answer, "\n");
-        if ($pos_code > 0) {
-            return substr($answer, $pos_code);
+        $posCode = strpos($answer, "\n");
+        if ($posCode > 0) {
+            return substr($answer, $posCode);
         }
         //---
         return null;
@@ -533,33 +480,33 @@ class MTConnect
     /**
      * Get code from string
      *
-     * @param string $ret_code_string
+     * @param string $retCodeString
      *
      * @return int
      */
-    public static function GetRetCode($ret_code_string)
+    public static function GetRetCode($retCodeString): int
     {
-        if (empty($ret_code_string))
-            return "";
-        $p = explode(" ", $ret_code_string, 2);
+        if (empty($retCodeString))
+            return 0;
+        $p = explode(" ", $retCodeString, 2);
         //---
         return (int) $p[0];
     }
 
     /**
-     * @param string $crypt    hash random string from MT server
+     * @param string $cryptRand    hash random string from MT server
      * @param string $password password to connection mt server
      *
      * @return void
      */
-    public function SetCryptRand($crypt, $password)
+    public function SetCryptRand($cryptRand, $password)
     {
-        $this->m_crypt_rand = $crypt;
+        $this->cryptRand = $cryptRand;
         $out = md5(md5(mb_convert_encoding($password, 'utf-16le', 'utf-8'), true) . MTProtocolConsts::WEB_API_WORD);
         //---
         for ($i = 0; $i < 16; $i++) {
-            $out = md5(MTUtils::GetFromHex(substr($this->m_crypt_rand, $i * 32, 32)) . MTUtils::GetFromHex($out));
-            $this->crypt_iv[$i] = $out;
+            $out = md5(MTUtils::GetFromHex(substr($this->cryptRand, $i * 32, 32)) . MTUtils::GetFromHex($out));
+            $this->cryptIv[$i] = $out;
         }
     }
 }

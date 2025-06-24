@@ -1,4 +1,5 @@
 <?php
+
 namespace Aleedhillon\MetaTraderClient\Lib;
 
 /**
@@ -16,6 +17,11 @@ class MTAccount
      * @var int
      */
     public $CurrencyDigits;
+    /**
+     * currency
+     * @var string
+     */
+    public $Currency;
     /**
      * balance
      * @var double

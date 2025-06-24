@@ -1,4 +1,5 @@
 <?php
+
 namespace Aleedhillon\MetaTraderClient\Lib;
 
 class MTOrderJson
@@ -6,9 +7,9 @@ class MTOrderJson
     /**
      * Get MTOrder from json object
      * @param object $obj
-     * @return MTOrder
+     * @return MTOrder|null
      */
-    public static function GetFromJson($obj)
+    public static function GetFromJson($obj): ?MTOrder
     {
         if ($obj == null)
             return null;

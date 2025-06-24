@@ -1,4 +1,5 @@
 <?php
+
 namespace Aleedhillon\MetaTraderClient\Lib;
 
 /**
@@ -12,9 +13,9 @@ class MTUserAnswer
 
     /**
      * From json get class MTUser
-     * @return MTUser
+     * @return MTUser|null
      */
-    public function GetFromJson()
+    public function GetFromJson(): ?MTUser
     {
         $obj = MTJson::Decode($this->ConfigJson);
         if ($obj == null)

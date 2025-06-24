@@ -1,4 +1,5 @@
 <?php
+
 namespace Aleedhillon\MetaTraderClient\Lib;
 
 
@@ -34,17 +35,17 @@ class MTDeal
     public $Order;
     /**
      * EnDealAction
-     * @var EnDealAction
+     * @var MTEnDealAction
      */
     public $Action;
     /**
      * EnEntryFlags
-     * @var EnEntryFlags
+     * @var MTEnEntryFlags
      */
     public $Entry;
     /**
      * EnDealReason
-     * @var EnDealReason
+     * @var MTEnDealReason
      */
     public $Reason;
     /**
@@ -138,6 +139,16 @@ class MTDeal
      */
     public $ProfitRaw;
     /**
+     * stop loss price
+     * @var double
+     */
+    public $PriceSL;
+    /**
+     * take profit price
+     * @var double
+     */
+    public $PriceTP;
+    /**
      * closed position  price
      * @var double
      */
@@ -179,7 +190,7 @@ class MTDeal
     public $PriceGateway;
     /**
      * EnEntryFlags
-     * @var EnEntryFlags
+     * @var MTEnEntryFlags
      */
     public $ModifyFlags;
 }

@@ -1,4 +1,5 @@
 <?php
+
 namespace Aleedhillon\MetaTraderClient\Lib;
 
 /**
@@ -10,9 +11,9 @@ class MTHistoryAnswer
     public $ConfigJson = '';
     /**
      * From json get class MTOrder
-     * @return array(MTOrder)
+     * @return MTOrder|null
      */
-    public function GetFromJson()
+    public function GetFromJson(): ?MTOrder
     {
         $obj = MTJson::Decode($this->ConfigJson);
         if ($obj == null)

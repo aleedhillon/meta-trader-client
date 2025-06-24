@@ -5,7 +5,6 @@ namespace Aleedhillon\MetaTraderClient;
 use Aleedhillon\MetaTraderClient\Lib\MTDeal;
 use Aleedhillon\MetaTraderClient\Lib\MTUser;
 use Aleedhillon\MetaTraderClient\Lib\MTOrder;
-use Aleedhillon\MetaTraderClient\Lib\MTLogger;
 use Aleedhillon\MetaTraderClient\Lib\MTServer;
 use Aleedhillon\MetaTraderClient\Lib\MTAccount;
 use Aleedhillon\MetaTraderClient\Lib\MTConnect;
@@ -15,7 +14,6 @@ use Aleedhillon\MetaTraderClient\Lib\MTConGroup;
 use Aleedhillon\MetaTraderClient\Lib\MTPosition;
 use Aleedhillon\MetaTraderClient\Lib\MTConCommon;
 use Aleedhillon\MetaTraderClient\Lib\MTConSymbol;
-use Aleedhillon\MetaTraderClient\Lib\MTLoggerType;
 use Aleedhillon\MetaTraderClient\Lib\MTAuthProtocol;
 use Aleedhillon\MetaTraderClient\Lib\MTDealProtocol;
 use Aleedhillon\MetaTraderClient\Lib\MTEnDealAction;
@@ -34,6 +32,9 @@ use Aleedhillon\MetaTraderClient\Lib\MTProtocolConsts;
 use Aleedhillon\MetaTraderClient\Lib\MTSymbolProtocol;
 use Aleedhillon\MetaTraderClient\Lib\MTHistoryProtocol;
 use Aleedhillon\MetaTraderClient\Lib\MTPositionProtocol;
+use Aleedhillon\MetaTraderClient\Exceptions\MetaTraderException;
+use Aleedhillon\MetaTraderClient\Lib\MTUtils;
+use Aleedhillon\MetaTraderClient\Lib\MTEnTradeMode;
 
 //+------------------------------------------------------------------+
 //|                                             MetaTrader 5 Web API |
@@ -59,7 +60,6 @@ class MetaTraderClient
 
     public function __construct(
         $agent = 'WebAPI',
-        $file_path = null,
         $shouldCrypt = true,
         $ip = null,
         $port = null,
@@ -70,16 +70,14 @@ class MetaTraderClient
         $this->agent = $agent;
         $this->shouldCrypt = $shouldCrypt;
 
-        $this->ip = $ip ?? config('meta-trader-client.ip');
-        $this->port = $port ?? config('meta-trader-client.port');
-        $this->timeout = $timeout ?? config('meta-trader-client.timeout');
-        $this->login = $login ?? config('meta-trader-client.login');
-        $this->password = $password ?? config('meta-trader-client.password');
-
-        MTLogger::Init($agent, true, $file_path);
+        $this->ip = $ip;
+        $this->port = $port;
+        $this->timeout = $timeout;
+        $this->login = $login;
+        $this->password = $password;
     }
 
-    public function connect(): int|MTRetCode
+    public function connect(): void
     {
         //--- create connection class
         $this->connector = new MTConnect($this->ip, $this->port, $this->timeout, $this->shouldCrypt);
@@ -87,24 +85,22 @@ class MetaTraderClient
         $connectionResponseCode = $this->connector->Connect();
 
         if ($connectionResponseCode != MTRetCode::MT_RET_OK) {
-            return $connectionResponseCode;
+            throw MetaTraderException::fromMtCode($connectionResponseCode);
         }
         //--- authorization to MetaTrader 5 server
         $authenticator = new MTAuthProtocol($this->connector, $this->agent);
         //---
-        $crypt_rand = '';
+        $cryptRand = '';
 
-        $authRespondeCode = $authenticator->Auth($this->login, $this->password, $this->shouldCrypt, $crypt_rand);
+        $authRespondeCode = $authenticator->Auth($this->login, $this->password, $this->shouldCrypt, $cryptRand);
         if ($authRespondeCode != MTRetCode::MT_RET_OK) {
             //--- disconnect
-            $this->Disconnect();
-            return $authRespondeCode;
+            $this->disconnect();
+            throw MetaTraderException::fromMtCode($authRespondeCode);
         }
         //--- if need crypt
         if ($this->shouldCrypt)
-            $this->connector->SetCryptRand($crypt_rand, $this->password);
-        //---
-        return MTRetCode::MT_RET_OK;
+            $this->connector->SetCryptRand($cryptRand, $this->password);
     }
 
     public function isConnected(): bool
@@ -120,650 +116,940 @@ class MetaTraderClient
         }
     }
 
-    public function connectIfNotConnected(): int|MTRetCode
+    public function connectIfNotConnected(): void
     {
         if (!$this->isConnected()) {
-            return $this->connect();
+            $this->connect();
         }
-
-        return MTRetCode::MT_RET_OK;
     }
 
     /**
      * Get current time from server
      *
-     * @param MTConTime $time - time
-     *
-     * @return MTRetCode
+     * @return MTConTime
+     * @throws MetaTraderException
      */
-    public function TimeGet(&$time)
+    public function timeGet(): MTConTime
     {
         $this->connectIfNotConnected();
 
-        $mt_time = new MTTimeProtocol($this->connector);
-        return $mt_time->TimeGet($time);
+        $time = null;
+        $mtTime = new MTTimeProtocol($this->connector);
+        $result = $mtTime->TimeGet($time);
+
+        if ($result !== MTRetCode::MT_RET_OK) {
+            throw MetaTraderException::fromMtCode($result);
+        }
+
+        if ($time === null) {
+            throw MetaTraderException::fromMtCode(MTRetCode::MT_RET_ERR_DATA);
+        }
+
+        return $time;
     }
 
     /**
      * Get current time from server
      * @return int - time in unix format
+     * @throws MetaTraderException
      */
-    public function TimeServer()
+    public function timeServer(): int
     {
         $this->connectIfNotConnected();
 
-        $mt_time = new MTTimeProtocol($this->connector);
-        return $mt_time->TimeServer();
+        $mtTime = new MTTimeProtocol($this->connector);
+        $result = $mtTime->TimeServer();
+
+        // TimeServer returns the actual time or error code, need to check if it's an error
+        if ($result < 0) {
+            throw MetaTraderException::fromMtCode($result);
+        }
+
+        return $result;
     }
 
     /**
      * Get common information
      *
-     * @param MTConCommon $common
-     *
-     * @return MTRetCode
+     * @return MTConCommon
+     * @throws MetaTraderException
      */
-    public function CommonGet(&$common)
+    public function commonGet(): MTConCommon
     {
         $this->connectIfNotConnected();
 
-        $mt_common = new MTCommonProtocol($this->connector);
-        return $mt_common->CommonGet($common);
+        $common = null;
+        $mtCommon = new MTCommonProtocol($this->connector);
+        $result = $mtCommon->CommonGet($common);
+
+        if ($result !== MTRetCode::MT_RET_OK) {
+            throw MetaTraderException::fromMtCode($result);
+        }
+
+        if ($common === null) {
+            throw MetaTraderException::fromMtCode(MTRetCode::MT_RET_ERR_DATA);
+        }
+
+        return $common;
     }
 
     /**
      * Get count of groups
      *
-     * @param int $total - count groups
-     *
-     * @return MTRetCode
+     * @return int - count groups
+     * @throws MetaTraderException
      */
-    public function GroupTotal(&$total)
+    public function groupTotal(): int
     {
         $this->connectIfNotConnected();
 
-        $mt_group = new MTGroupProtocol($this->connector);
-        return $mt_group->GroupTotal($total);
+        $total = null;
+        $mtGroup = new MTGroupProtocol($this->connector);
+        $result = $mtGroup->GroupTotal($total);
+
+        if ($result !== MTRetCode::MT_RET_OK) {
+            throw MetaTraderException::fromMtCode($result);
+        }
+
+        return (int) $total;
     }
 
     /**
      * Get next group
      *
-     * @param int        $pos        - position
-     * @param MTConGroup $group_next - next group
-     *
-     * @return MTRetCode
+     * @param int $pos - position
+     * @return MTConGroup - next group
+     * @throws MetaTraderException
      */
-    public function GroupNext($pos, &$group_next)
+    public function groupNext(int $pos): MTConGroup
     {
         $this->connectIfNotConnected();
 
-        $mt_group = new MTGroupProtocol($this->connector);
-        return $mt_group->GroupNext($pos, $group_next);
+        $groupNext = null;
+        $mtGroup = new MTGroupProtocol($this->connector);
+        $result = $mtGroup->GroupNext($pos, $groupNext);
+
+        if ($result !== MTRetCode::MT_RET_OK) {
+            throw MetaTraderException::fromMtCode($result);
+        }
+
+        if ($groupNext === null) {
+            throw MetaTraderException::fromMtCode(MTRetCode::MT_RET_ERR_DATA);
+        }
+
+        return $groupNext;
     }
 
     /**
      * Get group by name
      *
-     * @param string     $name - name group
-     * @param MTConGroup $group
-     *
-     * @return MTRetCode
+     * @param string $name - name group
+     * @return MTConGroup
+     * @throws MetaTraderException
      */
-    public function GroupGet($name, &$group)
+    public function groupGet(string $name): MTConGroup
     {
         $this->connectIfNotConnected();
 
-        $mt_group = new MTGroupProtocol($this->connector);
-        return $mt_group->GroupGet($name, $group);
+        $group = null;
+        $mtGroup = new MTGroupProtocol($this->connector);
+        $result = $mtGroup->GroupGet($name, $group);
+
+        if ($result !== MTRetCode::MT_RET_OK) {
+            throw MetaTraderException::fromMtCode($result);
+        }
+
+        if ($group === null) {
+            throw MetaTraderException::fromMtCode(MTRetCode::MT_RET_ERR_DATA);
+        }
+
+        return $group;
     }
 
     /**
      * Add or update group
      *
      * @param MTConGroup $group
-     * @param MTConGroup $new_group
-     *
-     * @return MTRetCode
+     * @return MTConGroup
+     * @throws MetaTraderException
      */
-    public function GroupAdd($group, &$new_group)
+    public function groupAdd(MTConGroup $group): MTConGroup
     {
         $this->connectIfNotConnected();
 
-        $mt_group = new MTGroupProtocol($this->connector);
-        return $mt_group->GroupAdd($group, $new_group);
+        $newGroup = null;
+        $mtGroup = new MTGroupProtocol($this->connector);
+        $result = $mtGroup->GroupAdd($group, $newGroup);
+
+        if ($result !== MTRetCode::MT_RET_OK) {
+            throw MetaTraderException::fromMtCode($result);
+        }
+
+        if ($newGroup === null) {
+            throw MetaTraderException::fromMtCode(MTRetCode::MT_RET_ERR_DATA);
+        }
+
+        return $newGroup;
     }
 
     /**
      * Delete group by name
      *
-     * @param string     $name - name group
-     *
-     * @return MTRetCode
+     * @param string $name - name group
+     * @return void
+     * @throws MetaTraderException
      */
-    public function GroupDelete($name)
+    public function groupDelete(string $name): void
     {
         $this->connectIfNotConnected();
 
-        $mt_group = new MTGroupProtocol($this->connector);
-        return $mt_group->GroupDelete($name);
+        $mtGroup = new MTGroupProtocol($this->connector);
+        $result = $mtGroup->GroupDelete($name);
+
+        if ($result !== MTRetCode::MT_RET_OK) {
+            throw MetaTraderException::fromMtCode($result);
+        }
     }
 
     /**
      * Get count symbols
      *
-     * @param int $total - get total symbols
-     *
-     * @return MTRetCode
+     * @return int - get total symbols
+     * @throws MetaTraderException
      */
-    public function SymbolTotal(&$total)
+    public function symbolTotal(): int
     {
         $this->connectIfNotConnected();
 
+        $total = null;
         $symbol = new MTSymbolProtocol($this->connector);
-        return $symbol->SymbolTotal($total);
+        $result = $symbol->SymbolTotal($total);
+
+        if ($result !== MTRetCode::MT_RET_OK) {
+            throw MetaTraderException::fromMtCode($result);
+        }
+
+        return (int) $total;
     }
 
     /**
      * Get next symbol
      *
-     * @param int         $pos
-     * @param MTConSymbol $symbol_next
-     *
-     * @return MTRetCode
+     * @param int $pos
+     * @return MTConSymbol
+     * @throws MetaTraderException
      */
-    public function SymbolNext($pos, &$symbol_next)
+    public function symbolNext(int $pos): MTConSymbol
     {
         $this->connectIfNotConnected();
 
-        $mt_symbol = new MTSymbolProtocol($this->connector);
-        return $mt_symbol->SymbolNext($pos, $symbol_next);
+        $symbolNext = null;
+        $mtSymbol = new MTSymbolProtocol($this->connector);
+        $result = $mtSymbol->SymbolNext($pos, $symbolNext);
+
+        if ($result !== MTRetCode::MT_RET_OK) {
+            throw MetaTraderException::fromMtCode($result);
+        }
+
+        if ($symbolNext === null) {
+            throw MetaTraderException::fromMtCode(MTRetCode::MT_RET_ERR_DATA);
+        }
+
+        return $symbolNext;
     }
 
     /**
      * Get symbol
      *
-     * @param string      $name
-     * @param MTConSymbol $symbol
-     *
-     * @return MTRetCode
+     * @param string $name
+     * @return MTConSymbol
+     * @throws MetaTraderException
      */
-    public function SymbolGet($name, &$symbol)
+    public function symbolGet(string $name): MTConSymbol
     {
         $this->connectIfNotConnected();
 
-        $mt_symbol = new MTSymbolProtocol($this->connector);
-        return $mt_symbol->SymbolGet($name, $symbol);
+        $symbol = null;
+        $mtSymbol = new MTSymbolProtocol($this->connector);
+        $result = $mtSymbol->SymbolGet($name, $symbol);
+
+        if ($result !== MTRetCode::MT_RET_OK) {
+            throw MetaTraderException::fromMtCode($result);
+        }
+
+        if ($symbol === null) {
+            throw MetaTraderException::fromMtCode(MTRetCode::MT_RET_ERR_DATA);
+        }
+
+        return $symbol;
     }
 
     /**
      * Get config symbol
      *
-     * @param string      $name  - symbol name
-     * @param string      $group - group name
-     * @param MTConSymbol $symbol
-     *
-     * @return MTRetCode
+     * @param string $name - symbol name
+     * @param string $group - group name
+     * @return MTConSymbol
+     * @throws MetaTraderException
      */
-    public function SymbolGetGroup($name, $group, &$symbol)
+    public function symbolGetGroup(string $name, string $group): MTConSymbol
     {
         $this->connectIfNotConnected();
 
-        $mt_symbol = new MTSymbolProtocol($this->connector);
-        return $mt_symbol->SymbolGetGroup($name, $group, $symbol);
+        $symbol = null;
+        $mtSymbol = new MTSymbolProtocol($this->connector);
+        $result = $mtSymbol->SymbolGetGroup($name, $group, $symbol);
+
+        if ($result !== MTRetCode::MT_RET_OK) {
+            throw MetaTraderException::fromMtCode($result);
+        }
+
+        if ($symbol === null) {
+            throw MetaTraderException::fromMtCode(MTRetCode::MT_RET_ERR_DATA);
+        }
+
+        return $symbol;
     }
 
     /**
      * Symbol add and update
      *
-     * @param MTConSymbol     $symbol     - symbol need add
-     * @param MTConSymbol     $new_symbol - symbol added to server
-     *
-     * @return MTRetCode
+     * @param MTConSymbol $symbol - symbol need add
+     * @return MTConSymbol - symbol added to server
+     * @throws MetaTraderException
      */
-    public function SymbolAdd($symbol, &$new_symbol)
+    public function symbolAdd(MTConSymbol $symbol): MTConSymbol
     {
         $this->connectIfNotConnected();
 
-        $mt_symbol = new MTSymbolProtocol($this->connector);
-        return $mt_symbol->SymbolAdd($symbol, $new_symbol);
+        $newSymbol = null;
+        $mtSymbol = new MTSymbolProtocol($this->connector);
+        $result = $mtSymbol->SymbolAdd($symbol, $newSymbol);
+
+        if ($result !== MTRetCode::MT_RET_OK) {
+            throw MetaTraderException::fromMtCode($result);
+        }
+
+        if ($newSymbol === null) {
+            throw MetaTraderException::fromMtCode(MTRetCode::MT_RET_ERR_DATA);
+        }
+
+        return $newSymbol;
     }
 
     /**
      * Symbol delete
      *
      * @param string $name
-     *
-     * @return MTRetCode
+     * @return void
+     * @throws MetaTraderException
      */
-    public function SymbolDelete($name)
+    public function symbolDelete(string $name): void
     {
         $this->connectIfNotConnected();
 
-        $mt_symbol = new MTSymbolProtocol($this->connector);
-        return $mt_symbol->SymbolDelete($name);
+        $mtSymbol = new MTSymbolProtocol($this->connector);
+        $result = $mtSymbol->SymbolDelete($name);
+
+        if ($result !== MTRetCode::MT_RET_OK) {
+            throw MetaTraderException::fromMtCode($result);
+        }
     }
 
     /**
      * Add user to server
      *
-     * @param MTUser $user     - user add to server
-     * @param MTUser $new_user - user added to server
-     *
-     * @return MTRetCode
+     * @param MTUser $user - user add to server
+     * @return MTUser - user added to server
+     * @throws MetaTraderException
      */
-    public function UserAdd($user, &$new_user)
+    public function userAdd(MTUser $user): MTUser
     {
         $this->connectIfNotConnected();
 
-        $mt_user = new MTUserProtocol($this->connector);
-        return $mt_user->Add($user, $new_user);
+        $newUser = null;
+        $mtUser = new MTUserProtocol($this->connector);
+        $result = $mtUser->Add($user, $newUser);
+
+        if ($result !== MTRetCode::MT_RET_OK) {
+            throw MetaTraderException::fromMtCode($result);
+        }
+
+        if ($newUser === null) {
+            throw MetaTraderException::fromMtCode(MTRetCode::MT_RET_ERR_DATA);
+        }
+
+        return $newUser;
     }
 
     /**
      * Update user to server
      *
-     * @param MTUser $user - user add to server
-     * @param MTUser $new_user
-     *
-     * @return MTRetCode
+     * @param MTUser $user - user to update
+     * @return MTUser - updated user
+     * @throws MetaTraderException
      */
-    public function UserUpdate($user, &$new_user)
+    public function userUpdate(MTUser $user): MTUser
     {
         $this->connectIfNotConnected();
 
-        $mt_user = new MTUserProtocol($this->connector);
-        return $mt_user->Update($user, $new_user);
+        $newUser = null;
+        $mtUser = new MTUserProtocol($this->connector);
+        $result = $mtUser->Update($user, $newUser);
+
+        if ($result !== MTRetCode::MT_RET_OK) {
+            throw MetaTraderException::fromMtCode($result);
+        }
+
+        if ($newUser === null) {
+            throw MetaTraderException::fromMtCode(MTRetCode::MT_RET_ERR_DATA);
+        }
+
+        return $newUser;
     }
 
     /**
      * User delete from server
      *
      * @param int $login
-     *
-     * @return MTRetCode
+     * @return void
+     * @throws MetaTraderException
      */
-    public function UserDelete($login)
+    public function userDelete(int $login): void
     {
         $this->connectIfNotConnected();
 
-        $mt_user = new MTUserProtocol($this->connector);
-        return $mt_user->Delete($login);
+        $mtUser = new MTUserProtocol($this->connector);
+        $result = $mtUser->Delete($login);
+
+        if ($result !== MTRetCode::MT_RET_OK) {
+            throw MetaTraderException::fromMtCode($result);
+        }
     }
 
     /**
      * Get user
      *
-     * @param int    $login
-     * @param MTUser $user
-     *
-     * @return MTRetCode
+     * @param int $login
+     * @return MTUser
+     * @throws MetaTraderException
      */
-    public function UserGet($login, &$user)
+    public function userGet(int $login): MTUser
     {
         $this->connectIfNotConnected();
 
-        $mt_user = new MTUserProtocol($this->connector);
-        return $mt_user->Get($login, $user);
+        $user = null;
+        $mtUser = new MTUserProtocol($this->connector);
+        $result = $mtUser->Get($login, $user);
+
+        if ($result !== MTRetCode::MT_RET_OK) {
+            throw MetaTraderException::fromMtCode($result);
+        }
+
+        if ($user === null) {
+            throw MetaTraderException::fromMtCode(MTRetCode::MT_RET_ERR_DATA);
+        }
+
+        return $user;
     }
 
     /**
      * Check login and password
      *
-     * @param int    $login
+     * @param int $login
      * @param string $password
      * @param string $type
-     *
-     * @return MTRetCode
+     * @return bool
+     * @throws MetaTraderException
      */
-    public function UserPasswordCheck($login, $password, $type = MTProtocolConsts::WEB_VAL_USER_PASS_MAIN)
+    public function userPasswordCheck(int $login, string $password, string $type = MTProtocolConsts::WEB_VAL_USER_PASS_MAIN): bool
     {
         $this->connectIfNotConnected();
 
-        $mt_user = new MTUserProtocol($this->connector);
-        return $mt_user->PasswordCheck($login, $password, $type);
+        $mtUser = new MTUserProtocol($this->connector);
+        $result = $mtUser->PasswordCheck($login, $password, $type);
+
+        if ($result !== MTRetCode::MT_RET_OK) {
+            throw MetaTraderException::fromMtCode($result);
+        }
+
+        return true;
     }
 
     /**
      * User change password
      *
-     * @param int    $login
-     * @param string $new_password - new password
+     * @param int $login
+     * @param string $newPassword - new password
      * @param string $type
-     *
-     * @return MTRetCode
+     * @return void
+     * @throws MetaTraderException
      */
-    public function UserPasswordChange($login, $new_password, $type = MTProtocolConsts::WEB_VAL_USER_PASS_MAIN)
+    public function userPasswordChange(int $login, string $newPassword, string $type = MTProtocolConsts::WEB_VAL_USER_PASS_MAIN): void
     {
         $this->connectIfNotConnected();
 
-        $mt_user = new MTUserProtocol($this->connector);
-        return $mt_user->PasswordChange($login, $new_password, $type);
+        $mtUser = new MTUserProtocol($this->connector);
+        $result = $mtUser->PasswordChange($login, $newPassword, $type);
+
+        if ($result !== MTRetCode::MT_RET_OK) {
+            throw MetaTraderException::fromMtCode($result);
+        }
     }
 
     /**
      * User deposit change
      *
-     * @param int            $login
-     * @param float          $new_deposit - new deposit
-     * @param string         $comment     - comment
+     * @param int $login
+     * @param float $newDeposit - new deposit
+     * @param string $comment - comment
      * @param MTEnDealAction $type
-     *
-     * @return MTRetCode
+     * @return void
+     * @throws MetaTraderException
      */
-    public function UserDepositChange($login, $new_deposit, $comment, $type)
+    public function userDepositChange(int $login, float $newDeposit, string $comment, MTEnDealAction $type): void
     {
         $this->connectIfNotConnected();
 
-        $mt_user = new MTUserProtocol($this->connector);
-        return $mt_user->DepositChange($login, $new_deposit, $comment, $type);
+        $mtUser = new MTUserProtocol($this->connector);
+        $result = $mtUser->DepositChange($login, $newDeposit, $comment, $type);
+
+        if ($result !== MTRetCode::MT_RET_OK) {
+            throw MetaTraderException::fromMtCode($result);
+        }
     }
 
     /**
      * Get account information
      *
-     * @param int       $login
-     * @param MTAccount $account
-     *
-     * @return MTRetCode
+     * @param int $login
+     * @return MTAccount
+     * @throws MetaTraderException
      */
-    public function UserAccountGet($login, &$account)
+    public function userAccountGet(int $login): MTAccount
     {
         $this->connectIfNotConnected();
 
-        $mt_user = new MTUserProtocol($this->connector);
-        return $mt_user->AccountGet($login, $account);
+        $account = null;
+        $mtUser = new MTUserProtocol($this->connector);
+        $result = $mtUser->AccountGet($login, $account);
+
+        if ($result !== MTRetCode::MT_RET_OK) {
+            throw MetaTraderException::fromMtCode($result);
+        }
+
+        if ($account === null) {
+            throw MetaTraderException::fromMtCode(MTRetCode::MT_RET_ERR_DATA);
+        }
+
+        return $account;
     }
 
     /**
      * Get list users login
      *
-     * @param string     $group
-     * @param array(int) $logins
-     *
-     * @return MTRetCode
+     * @param string $group
+     * @return array
+     * @throws MetaTraderException
      */
-    public function UserLogins($group, &$logins)
+    public function userLogins(string $group): array
     {
         $this->connectIfNotConnected();
 
-        $mt_user = new MTUserProtocol($this->connector);
-        return $mt_user->UserLogins($group, $logins);
+        $logins = null;
+        $mtUser = new MTUserProtocol($this->connector);
+        $result = $mtUser->UserLogins($group, $logins);
+
+        if ($result !== MTRetCode::MT_RET_OK) {
+            throw MetaTraderException::fromMtCode($result);
+        }
+
+        return $logins ?? [];
     }
 
     /**
      * Get order
      *
-     * @param int     $ticket
-     * @param MTOrder $order
-     *
-     * @return MTRetCode
+     * @param int $ticket
+     * @return MTOrder
+     * @throws MetaTraderException
      */
-    public function OrderGet($ticket, &$order)
+    public function orderGet(int $ticket): MTOrder
     {
         $this->connectIfNotConnected();
 
-        $mt_order = new MTOrderProtocol($this->connector);
-        return $mt_order->OrderGet($ticket, $order);
+        $order = null;
+        $mtOrder = new MTOrderProtocol($this->connector);
+        $result = $mtOrder->OrderGet($ticket, $order);
+
+        if ($result !== MTRetCode::MT_RET_OK) {
+            throw MetaTraderException::fromMtCode($result);
+        }
+
+        if ($order === null) {
+            throw MetaTraderException::fromMtCode(MTRetCode::MT_RET_ERR_DATA);
+        }
+
+        return $order;
     }
 
     /**
      * Get all user orders
      *
      * @param int $login - user login
-     * @param int $total - count of orders
-     *
-     * @return MTRetCode
+     * @return int - count of orders
+     * @throws MetaTraderException
      */
-    public function OrderGetTotal($login, &$total)
+    public function orderGetTotal(int $login): int
     {
         $this->connectIfNotConnected();
 
-        $mt_order = new MTOrderProtocol($this->connector);
-        return $mt_order->OrderGetTotal($login, $total);
+        $total = null;
+        $mtOrder = new MTOrderProtocol($this->connector);
+        $result = $mtOrder->OrderGetTotal($login, $total);
+
+        if ($result !== MTRetCode::MT_RET_OK) {
+            throw MetaTraderException::fromMtCode($result);
+        }
+
+        return (int) $total;
     }
 
     /**
      * Get orders by page
      *
-     * @param int            $login  - user login
-     * @param int            $offset - record begin
-     * @param int            $total  - count needs orders
-     * @param array(MTOrder) $orders
-     *
-     * @return MTRetCode
+     * @param int $login - user login
+     * @param int $offset - record begin
+     * @param int $total - count needs orders
+     * @return array
+     * @throws MetaTraderException
      */
-    public function OrderGetPage($login, $offset, $total, &$orders)
+    public function orderGetPage(int $login, int $offset, int $total): array
     {
         $this->connectIfNotConnected();
 
-        $mt_order = new MTOrderProtocol($this->connector);
-        return $mt_order->OrderGetPage($login, $offset, $total, $orders);
+        $orders = null;
+        $mtOrder = new MTOrderProtocol($this->connector);
+        $result = $mtOrder->OrderGetPage($login, $offset, $total, $orders);
+
+        if ($result !== MTRetCode::MT_RET_OK) {
+            throw MetaTraderException::fromMtCode($result);
+        }
+
+        return $orders ?? [];
     }
 
     /**
      * Get position
      *
-     * @param int        $login
-     * @param string     $symbol
-     * @param MTPosition $position
-     *
-     * @return MTRetCode
+     * @param int $login
+     * @param string $symbol
+     * @return MTPosition
+     * @throws MetaTraderException
      */
-    public function PositionGet($login, $symbol, &$position)
+    public function positionGet(int $login, string $symbol): MTPosition
     {
         $this->connectIfNotConnected();
 
-        $mt_position = new MTPositionProtocol($this->connector);
-        return $mt_position->PositionGet($login, $symbol, $position);
+        $position = null;
+        $mtPosition = new MTPositionProtocol($this->connector);
+        $result = $mtPosition->PositionGet($login, $symbol, $position);
+
+        if ($result !== MTRetCode::MT_RET_OK) {
+            throw MetaTraderException::fromMtCode($result);
+        }
+
+        if ($position === null) {
+            throw MetaTraderException::fromMtCode(MTRetCode::MT_RET_ERR_DATA);
+        }
+
+        return $position;
     }
 
     /**
      * Get all user positions
      *
      * @param int $login - user login
-     * @param int $total - count of positions
-     *
-     * @return MTRetCode
+     * @return int - count of positions
+     * @throws MetaTraderException
      */
-    public function PositionGetTotal($login, &$total)
+    public function positionGetTotal(int $login): int
     {
         $this->connectIfNotConnected();
 
-        $mt_position = new MTPositionProtocol($this->connector);
-        return $mt_position->PositionGetTotal($login, $total);
+        $total = null;
+        $mtPosition = new MTPositionProtocol($this->connector);
+        $result = $mtPosition->PositionGetTotal($login, $total);
+
+        if ($result !== MTRetCode::MT_RET_OK) {
+            throw MetaTraderException::fromMtCode($result);
+        }
+
+        return (int) $total;
     }
 
     /**
      * Get positions by page
      *
-     * @param int               $login  - user login
-     * @param int               $offset - record begin
-     * @param int               $total  - count needs orders
-     * @param array(MTPosition) $positions
-     *
-     * @return MTRetCode
+     * @param int $login - user login
+     * @param int $offset - record begin
+     * @param int $total - count needs orders
+     * @return array
+     * @throws MetaTraderException
      */
-    public function PositionGetPage($login, $offset, $total, &$positions)
+    public function positionGetPage(int $login, int $offset, int $total): array
     {
         $this->connectIfNotConnected();
 
-        $mt_position = new MTPositionProtocol($this->connector);
-        return $mt_position->PositionGetPage($login, $offset, $total, $positions);
+        $positions = null;
+        $mtPosition = new MTPositionProtocol($this->connector);
+        $result = $mtPosition->PositionGetPage($login, $offset, $total, $positions);
+
+        if ($result !== MTRetCode::MT_RET_OK) {
+            throw MetaTraderException::fromMtCode($result);
+        }
+
+        return $positions ?? [];
     }
 
     /**
      * Get deal
      *
-     * @param int    $ticket
-     * @param MTDeal $deal
-     *
-     * @return MTRetCode
+     * @param int $ticket
+     * @return MTDeal
+     * @throws MetaTraderException
      */
-    public function DealGet($ticket, &$deal)
+    public function dealGet(int $ticket): MTDeal
     {
         $this->connectIfNotConnected();
 
-        $mt_deal = new MTDealProtocol($this->connector);
-        return $mt_deal->DealGet($ticket, $deal);
+        $deal = null;
+        $mtDeal = new MTDealProtocol($this->connector);
+        $result = $mtDeal->DealGet($ticket, $deal);
+
+        if ($result !== MTRetCode::MT_RET_OK) {
+            throw MetaTraderException::fromMtCode($result);
+        }
+
+        if ($deal === null) {
+            throw MetaTraderException::fromMtCode(MTRetCode::MT_RET_ERR_DATA);
+        }
+
+        return $deal;
     }
 
     /**
      * Get count deals
      *
      * @param int $login - user login
-     * @param int $from  - from date
-     * @param int $to    - to date
-     * @param int $total - count of deals
-     *
-     * @return MTRetCode
+     * @param int $from - from date
+     * @param int $to - to date
+     * @return int - count of deals
+     * @throws MetaTraderException
      */
-    public function DealGetTotal($login, $from, $to, &$total)
+    public function dealGetTotal(int $login, int $from, int $to): int
     {
         $this->connectIfNotConnected();
 
-        $mt_deal = new MTDealProtocol($this->connector);
-        return $mt_deal->DealGetTotal($login, $from, $to, $total);
+        $total = null;
+        $mtDeal = new MTDealProtocol($this->connector);
+        $result = $mtDeal->DealGetTotal($login, $from, $to, $total);
+
+        if ($result !== MTRetCode::MT_RET_OK) {
+            throw MetaTraderException::fromMtCode($result);
+        }
+
+        return (int) $total;
     }
 
     /**
-     * Get orders by page
+     * Get deals by page
      *
-     * @param int           $login  - user login
-     * @param int           $from   - from date
-     * @param int           $to     - to date
-     * @param int           $offset - record begin
-     * @param int           $total  - count needs orders
-     * @param array(MTDeal) $deals
-     *
-     * @return MTRetCode
+     * @param int $login - user login
+     * @param int $from - from date
+     * @param int $to - to date
+     * @param int $offset - record begin
+     * @param int $total - count needs deals
+     * @return array
+     * @throws MetaTraderException
      */
-    public function DealGetPage($login, $from, $to, $offset, $total, &$deals)
+    public function dealGetPage(int $login, int $from, int $to, int $offset, int $total): array
     {
         $this->connectIfNotConnected();
 
-        $mt_deal = new MTDealProtocol($this->connector);
-        return $mt_deal->DealGetPage($login, $from, $to, $offset, $total, $deals);
+        $deals = null;
+        $mtDeal = new MTDealProtocol($this->connector);
+        $result = $mtDeal->DealGetPage($login, $from, $to, $offset, $total, $deals);
+
+        if ($result !== MTRetCode::MT_RET_OK) {
+            throw MetaTraderException::fromMtCode($result);
+        }
+
+        return $deals ?? [];
     }
 
     /**
      * Get history
      *
-     * @param int     $ticket
-     * @param MTOrder $history
-     *
-     * @return MTRetCode
+     * @param int $ticket
+     * @return MTOrder
+     * @throws MetaTraderException
      */
-    public function HistoryGet($ticket, &$history)
+    public function historyGet(int $ticket): MTOrder
     {
         $this->connectIfNotConnected();
 
-        $mt_deal = new MTHistoryProtocol($this->connector);
-        return $mt_deal->HistoryGet($ticket, $history);
+        $history = null;
+        $mtHistory = new MTHistoryProtocol($this->connector);
+        $result = $mtHistory->HistoryGet($ticket, $history);
+
+        if ($result !== MTRetCode::MT_RET_OK) {
+            throw MetaTraderException::fromMtCode($result);
+        }
+
+        if ($history === null) {
+            throw MetaTraderException::fromMtCode(MTRetCode::MT_RET_ERR_DATA);
+        }
+
+        return $history;
     }
 
     /**
-     * Get count deals
+     * Get count history
      *
      * @param int $login - user login
-     * @param int $from  - from date
-     * @param int $to    - to date
-     * @param int $total - count of history
-     *
-     * @return MTRetCode
+     * @param int $from - from date
+     * @param int $to - to date
+     * @return int - count of history
+     * @throws MetaTraderException
      */
-    public function HistoryGetTotal($login, $from, $to, &$total)
+    public function historyGetTotal(int $login, int $from, int $to): int
     {
         $this->connectIfNotConnected();
 
-        $mt_deal = new MTHistoryProtocol($this->connector);
-        return $mt_deal->HistoryGetTotal($login, $from, $to, $total);
+        $total = null;
+        $mtHistory = new MTHistoryProtocol($this->connector);
+        $result = $mtHistory->HistoryGetTotal($login, $from, $to, $total);
+
+        if ($result !== MTRetCode::MT_RET_OK) {
+            throw MetaTraderException::fromMtCode($result);
+        }
+
+        return (int) $total;
     }
 
     /**
-     * Get orders by page
+     * Get history by page
      *
-     * @param int            $login  - user login
-     * @param int            $from   - from date
-     * @param int            $to     - to date
-     * @param int            $offset - record begin
-     * @param int            $total  - count needs orders
-     * @param array(MTOrder) $orders
-     *
-     * @return MTRetCode
+     * @param int $login - user login
+     * @param int $from - from date
+     * @param int $to - to date
+     * @param int $offset - record begin
+     * @param int $total - count needs orders
+     * @return array
+     * @throws MetaTraderException
      */
-    public function HistoryGetPage($login, $from, $to, $offset, $total, &$orders)
+    public function historyGetPage(int $login, int $from, int $to, int $offset, int $total): array
     {
         $this->connectIfNotConnected();
 
-        $mt_deal = new MTHistoryProtocol($this->connector);
-        return $mt_deal->HistoryGetPage($login, $from, $to, $offset, $total, $orders);
+        $orders = null;
+        $mtHistory = new MTHistoryProtocol($this->connector);
+        $result = $mtHistory->HistoryGetPage($login, $from, $to, $offset, $total, $orders);
+
+        if ($result !== MTRetCode::MT_RET_OK) {
+            throw MetaTraderException::fromMtCode($result);
+        }
+
+        return $orders ?? [];
     }
 
     /**
-     * Get last tickets
+     * Get last ticks
      *
-     * @param string        $symbol
-     * @param array(MTTick) $ticks
-     *
-     * @return MTRetCode
+     * @param string $symbol
+     * @return array
+     * @throws MetaTraderException
      */
-    public function TickLast($symbol, &$ticks)
+    public function tickLast(string $symbol): array
     {
         $this->connectIfNotConnected();
 
-        $mt_tick = new MTTickProtocol($this->connector);
-        return $mt_tick->TickLast($symbol, $ticks);
+        $ticks = null;
+        $mtTick = new MTTickProtocol($this->connector);
+        $result = $mtTick->TickLast($symbol, $ticks);
+
+        if ($result !== MTRetCode::MT_RET_OK) {
+            throw MetaTraderException::fromMtCode($result);
+        }
+
+        return $ticks ?? [];
     }
 
     /**
-     * Get last tickets by symbol and group
+     * Get last ticks by symbol and group
      *
-     * @param string        $symbol
-     * @param string        $group
-     * @param array(MTTick) $ticks
-     *
-     * @return MTRetCode
+     * @param string $symbol
+     * @param string $group
+     * @return array
+     * @throws MetaTraderException
      */
-    public function TickLastGroup($symbol, $group, &$ticks)
+    public function tickLastGroup(string $symbol, string $group): array
     {
         $this->connectIfNotConnected();
 
-        $mt_tick = new MTTickProtocol($this->connector);
-        return $mt_tick->TickLastGroup($symbol, $group, $ticks);
+        $ticks = null;
+        $mtTick = new MTTickProtocol($this->connector);
+        $result = $mtTick->TickLastGroup($symbol, $group, $ticks);
+
+        if ($result !== MTRetCode::MT_RET_OK) {
+            throw MetaTraderException::fromMtCode($result);
+        }
+
+        return $ticks ?? [];
     }
 
     /**
-     * Get last tickets
+     * Get tick statistics
      *
-     * @param string            $symbol
-     * @param array(MTTickStat) $tick_stat
-     *
-     * @return MTRetCode
+     * @param string $symbol
+     * @return array
+     * @throws MetaTraderException
      */
-    public function TickStat($symbol, &$tick_stat)
+    public function tickStat(string $symbol): array
     {
         $this->connectIfNotConnected();
 
-        $mt_tick = new MTTickProtocol($this->connector);
-        return $mt_tick->TickStat($symbol, $tick_stat);
+        $tickStat = null;
+        $mtTick = new MTTickProtocol($this->connector);
+        $result = $mtTick->TickStat($symbol, $tickStat);
+
+        if ($result !== MTRetCode::MT_RET_OK) {
+            throw MetaTraderException::fromMtCode($result);
+        }
+
+        return $tickStat ?? [];
     }
 
     /**
      * Send mail to user
      *
-     * @param string $to      - user login or mask
+     * @param string $to - user login or mask
      * @param string $subject - subject of mail
-     * @param string $text    - mail text, may be in html format
-     *
-     * @return MTRetCode
+     * @param string $text - mail text, may be in html format
+     * @return void
+     * @throws MetaTraderException
      */
-    public function MailSend($to, $subject, $text)
+    public function mailSend(string $to, string $subject, string $text): void
     {
         $this->connectIfNotConnected();
 
-        $mt_mail = new MTMailProtocol($this->connector);
-        return $mt_mail->MailSend($to, $subject, $text);
+        $mtMail = new MTMailProtocol($this->connector);
+        $result = $mtMail->MailSend($to, $subject, $text);
+
+        if ($result !== MTRetCode::MT_RET_OK) {
+            throw MetaTraderException::fromMtCode($result);
+        }
     }
 
     /**
@@ -771,169 +1057,306 @@ class MetaTraderClient
      *
      * @param string $subject - subject of news
      * @param string $category
-     * @param int    $language
-     * @param int    $priority
-     * @param string $text    - news text, may be in html format
-     *
-     * @return MTRetCode
+     * @param int $language
+     * @param int $priority
+     * @param string $text - news text, may be in html format
+     * @return void
+     * @throws MetaTraderException
      */
-    public function NewsSend($subject, $category, $language, $priority, $text)
+    public function newsSend(string $subject, string $category, int $language, int $priority, string $text): void
     {
         $this->connectIfNotConnected();
 
-        $mt_news = new MTNewsProtocol($this->connector);
-        return $mt_news->NewsSend($subject, $category, $language, $priority, $text);
+        $mtNews = new MTNewsProtocol($this->connector);
+        $result = $mtNews->NewsSend($subject, $category, $language, $priority, $text);
+
+        if ($result !== MTRetCode::MT_RET_OK) {
+            throw MetaTraderException::fromMtCode($result);
+        }
     }
 
     /**
      * Trade balance
      *
-     * @param int                 $login user login
-     * @param MTEnDealAction      $type | int
-     * @param double              $balance
-     * @param string              $comment
-     * @param int                 $ticket
-     * @param bool                $margin_check
-     *
-     * @return MTRetCode
+     * @param int $login user login
+     * @param MTEnDealAction $type
+     * @param float $balance
+     * @param string $comment
+     * @param bool $marginCheck
+     * @return int|null - ticket if applicable
+     * @throws MetaTraderException
      */
-    public function TradeBalance($login, $type, $balance, $comment, &$ticket = null, $margin_check = true)
+    public function tradeBalance(int $login, MTEnDealAction $type, float $balance, string $comment, bool $marginCheck = true): ?int
     {
         $this->connectIfNotConnected();
 
-        $mt_trade = new MTTradeProtocol($this->connector);
-        return $mt_trade->TradeBalance($login, $type, $balance, $comment, $ticket, $margin_check);
+        $ticket = null;
+        $mtTrade = new MTTradeProtocol($this->connector);
+        $result = $mtTrade->TradeBalance($login, $type, $balance, $comment, $ticket, $marginCheck);
+
+        if ($result !== MTRetCode::MT_RET_OK) {
+            throw MetaTraderException::fromMtCode($result);
+        }
+
+        return $ticket;
     }
 
     /**
      * Send ping to server
-     * @return MTRetCode
+     * 
+     * @return void
+     * @throws MetaTraderException
      */
-    public function Ping()
+    public function ping(): void
     {
         $this->connectIfNotConnected();
 
-        $mt_ping = new MTPingProtocol($this->connector);
-        return $mt_ping->PingSend();
+        $mtPing = new MTPingProtocol($this->connector);
+        $result = $mtPing->PingSend();
+
+        if ($result !== MTRetCode::MT_RET_OK) {
+            throw MetaTraderException::fromMtCode($result);
+        }
     }
 
     /**
      * Send custom command to MT server
      *
      * @param string $command
-     * @param array  $params
+     * @param array $params
      * @param string $body
-     * @param array  $answer
-     * @param string $answer_body
-     *
-     * @return MTRetCode
+     * @return array - response with answer and answer_body keys
+     * @throws MetaTraderException
      */
-    public function CustomSend($command, $params, $body, &$answer, &$answer_body)
+    public function customSend(string $command, array $params, string $body): array
     {
         $this->connectIfNotConnected();
 
-        $mt_custom = new MTCustomProtocol($this->connector);
-        return $mt_custom->CustomSend($command, $params, $body, $answer, $answer_body);
+        $answer = null;
+        $answerBody = null;
+        $mtCustom = new MTCustomProtocol($this->connector);
+        $result = $mtCustom->CustomSend($command, $params, $body, $answer, $answerBody);
+
+        if ($result !== MTRetCode::MT_RET_OK) {
+            throw MetaTraderException::fromMtCode($result);
+        }
+
+        return [
+            'answer' => $answer ?? [],
+            'answer_body' => $answerBody ?? ''
+        ];
     }
 
     /**
-     * Restart server wich connect
-     * @return MTRetCode
+     * Restart server which connect
+     * 
+     * @return void
+     * @throws MetaTraderException
      */
-    public function ServerRestart()
+    public function serverRestart(): void
     {
         $this->connectIfNotConnected();
 
-        $mt_server = new MTServer($this->connector);
-        return $mt_server->Restart();
+        $mtServer = new MTServer($this->connector);
+        $result = $mtServer->Restart();
+
+        if ($result !== MTRetCode::MT_RET_OK) {
+            throw MetaTraderException::fromMtCode($result);
+        }
     }
 
     /**
-     * Create class user
+     * Create default user instance
+     * 
      * @return MTUser
      */
-    public function UserCreate()
+    public function userCreate(): MTUser
     {
-        $this->connectIfNotConnected();
-
         return MTUser::CreateDefault();
     }
 
     /**
-     * Create class group
+     * Create default group instance
+     * 
      * @return MTConGroup
      */
-    public function GroupCreate()
+    public function groupCreate(): MTConGroup
     {
-        $this->connectIfNotConnected();
-
         return MTConGroup::CreateDefault();
     }
 
     /**
-     * Create class symbol
+     * Create default symbol instance
+     * 
      * @return MTConSymbol
      */
-    public function SymbolCreate()
+    public function symbolCreate(): MTConSymbol
     {
-        $this->connectIfNotConnected();
-
         return MTConSymbol::CreateDefault();
     }
 
-    /**
-     * Set flag write logs
-     *
-     * @param bool $is_write need write logs
-     *
-     * @return void
-     */
-    public function SetLoggerIsWrite($is_write)
-    {
-        $this->connectIfNotConnected();
+    // ================================
+    // UTILITY METHODS
+    // ================================
 
-        MTLogger::setIsWriteLog($is_write);
+    /**
+     * Get error description from MT5 error code
+     * 
+     * @param int $errorCode
+     * @return string
+     */
+    public static function getErrorDescription(int $errorCode): string
+    {
+        // Create exception to get error message, then return just the message
+        return MetaTraderException::fromMtCode($errorCode)->getMessage();
     }
 
     /**
-     * Set path to write logs
-     *
-     * @param string $file_path
-     *
-     * @return void
+     * Convert old 4-digit volume format to new 8-digit format
+     * 
+     * @param int $oldVolume
+     * @return int
      */
-    public function SetLoggerFilePath($file_path)
+    public static function toNewVolume(int $oldVolume): int
     {
-        $this->connectIfNotConnected();
-
-        MTLogger::setFilePath($file_path);
+        return MTUtils::ToNewVolume($oldVolume);
     }
 
     /**
-     * Set prefix for log files
-     *
-     * @param string $prefix
-     *
-     * @return void
+     * Convert new 8-digit volume format to old 4-digit format
+     * 
+     * @param int $newVolume
+     * @return int
      */
-    public function SetLoggerFilePrefix($prefix)
+    public static function toOldVolume(int $newVolume): int
     {
-        $this->connectIfNotConnected();
-
-        MTLogger::setFilePrefix($prefix);
+        return MTUtils::ToOldVolume($newVolume);
     }
 
     /**
-     * Set or unset flag write MTLoggerType::DEBUG logs
-     *
-     * @param bool $is_write
-     *
-     * @return void
+     * Validate trade mode value
+     * 
+     * @param int $tradeMode
+     * @return int|null Returns validated trade mode or null if invalid
      */
-    public function SetLoggerWriteDebug($is_write)
+    public static function validateTradeMode(int $tradeMode): ?int
     {
-        $this->connectIfNotConnected();
+        return MTEnTradeMode::Get($tradeMode);
+    }
 
-        MTLogger::setWriteDebug($is_write);
+    /**
+     * Get default margin rates array
+     * 
+     * @return array
+     */
+    public static function getDefaultMarginRates(): array
+    {
+        return MTConSymbol::GetDefaultMarginRate();
+    }
+
+    /**
+     * Escape special characters for MT5 protocol
+     * 
+     * @param string $str
+     * @return string
+     */
+    public static function escapeProtocolString(string $str): string
+    {
+        return MTUtils::Quotes($str);
+    }
+
+    /**
+     * Generate random hex string (useful for testing)
+     * 
+     * @param int $length
+     * @return string
+     */
+    public static function generateRandomHex(int $length): string
+    {
+        return MTUtils::GetRandomHex($length);
+    }
+
+    /**
+     * Convert hex string to binary string
+     * 
+     * @param string $hexString
+     * @return string
+     */
+    public static function hexToBinary(string $hexString): string
+    {
+        return MTUtils::GetFromHex($hexString);
+    }
+
+    /**
+     * Convert binary data to hex string
+     * 
+     * @param array|string $bytes
+     * @return string
+     */
+    public static function binaryToHex($bytes): string
+    {
+        return MTUtils::GetHexFromBytes($bytes);
+    }
+
+    /**
+     * Get version information
+     * 
+     * @return array
+     */
+    public static function getVersionInfo(): array
+    {
+        return [
+            'web_api_version' => WebAPIVersion,
+            'web_api_date' => WebAPIDate,
+            'php_version' => PHP_VERSION,
+            'package_version' => '2.0.0' // Update this with actual package version
+        ];
+    }
+
+    /**
+     * Check if a symbol name is valid format
+     * 
+     * @param string $symbol
+     * @return bool
+     */
+    public static function isValidSymbolName(string $symbol): bool
+    {
+        // MT5 symbol names are typically 3-12 characters, alphanumeric + some special chars
+        return preg_match('/^[A-Za-z0-9._-]{1,32}$/', $symbol) === 1;
+    }
+
+    /**
+     * Check if a login number is in valid range
+     * 
+     * @param int $login
+     * @return bool
+     */
+    public static function isValidLogin(int $login): bool
+    {
+        // MT5 logins are typically positive integers
+        return $login > 0 && $login <= PHP_INT_MAX;
+    }
+
+    /**
+     * Format MT5 timestamp to human readable date
+     * 
+     * @param int $mtTimestamp
+     * @param string $format
+     * @return string
+     */
+    public static function formatMtTimestamp(int $mtTimestamp, string $format = 'Y-m-d H:i:s'): string
+    {
+        return date($format, $mtTimestamp);
+    }
+
+    /**
+     * Convert PHP timestamp to MT5 timestamp
+     * 
+     * @param int|null $phpTimestamp If null, uses current time
+     * @return int
+     */
+    public static function toMtTimestamp(?int $phpTimestamp = null): int
+    {
+        return $phpTimestamp ?? time();
     }
 }

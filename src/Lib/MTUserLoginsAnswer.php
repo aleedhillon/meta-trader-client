@@ -1,4 +1,5 @@
 <?php
+
 namespace Aleedhillon\MetaTraderClient\Lib;
 
 /**
@@ -11,9 +12,9 @@ class MTUserLoginsAnswer
 
     /**
      * From json get array logins
-     * @return array(int)
+     * @return array|null
      */
-    public function GetFromJson()
+    public function GetFromJson(): ?array
     {
         $objects = MTJson::Decode($this->ConfigJson);
         if ($objects == null)

@@ -1,4 +1,5 @@
 <?php
+
 namespace Aleedhillon\MetaTraderClient\Lib;
 
 
@@ -7,9 +8,9 @@ class MTTickStatJson
     /**
      * Get MTTickState from json object
      * @param object $obj
-     * @return MTTickStat
+     * @return MTTickStat|null
      */
-    public static function GetFromJson($obj)
+    public static function GetFromJson($obj): ?MTTickStat
     {
         if ($obj == null)
             return null;

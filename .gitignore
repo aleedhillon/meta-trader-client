@@ -1,0 +1,42 @@
+/vendor/
+composer.lock
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Laravel/PHP specific
+.env
+.env.local
+.env.*.local
+*.log
+storage/logs/*
+!storage/logs/.gitkeep
+
+# Workbench runtime files (keep structure, ignore generated content)
+workbench/storage/
+workbench/bootstrap/cache/
+workbench/database/database.sqlite
+workbench/.env
+
+# Testing
+.phpunit.result.cache
+coverage/
+.coverage
+tests/_output/
+
+# Build artifacts
+build/
+dist/

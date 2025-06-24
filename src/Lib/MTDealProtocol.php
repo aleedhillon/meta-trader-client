@@ -1,4 +1,5 @@
 <?php
+
 namespace Aleedhillon\MetaTraderClient\Lib;
 
 //+------------------------------------------------------------------+
@@ -11,44 +12,38 @@ namespace Aleedhillon\MetaTraderClient\Lib;
  */
 class MTDealProtocol
 {
-    private $m_connect; // connection to MT5 server
+    private $connection; // connection to MT5 server
     /**
      * @param MTConnect $connect - connect to MT5 server
      */
     public function __construct($connect)
     {
-        $this->m_connect = $connect;
+        $this->connection = $connect;
     }
     /**
      * Get dael
      * @param int $ticket - ticket
      * @param MTDeal $deal
-     * @return MTRetCode
+     * @return int
      */
     public function DealGet($ticket, &$deal)
     {
         //--- send request
         $data = array(MTProtocolConsts::WEB_PARAM_TICKET => $ticket);
         //---
-        if (!$this->m_connect->Send(MTProtocolConsts::WEB_CMD_DEAL_GET, $data)) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'send deal get failed');
+        if (!$this->connection->Send(MTProtocolConsts::WEB_CMD_DEAL_GET, $data)) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- get answer
-        if (($answer = $this->m_connect->Read()) == null) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'answer deal get is empty');
+        if (($answer = $this->connection->Read()) == null) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- parse answer
-        if (($error_code = $this->ParseDeal(MTProtocolConsts::WEB_CMD_DEAL_GET, $answer, $deal_answer)) != MTRetCode::MT_RET_OK) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'parse deal get failed: [' . $error_code . ']' . MTRetCode::GetError($error_code));
-            return $error_code;
+        if (($errorCode = $this->ParseDeal(MTProtocolConsts::WEB_CMD_DEAL_GET, $answer, $dealAnswer)) != MTRetCode::MT_RET_OK) {
+            return $errorCode;
         }
         //--- get object from json
-        $deal = $deal_answer->GetFromJson();
+        $deal = $dealAnswer->GetFromJson();
         //---
         return MTRetCode::MT_RET_OK;
     }
@@ -56,32 +51,32 @@ class MTDealProtocol
      * check answer from MetaTrader 5 server
      * @param string $command command
      * @param  string $answer answer from server
-     * @param  MTDealAnswer $deal_answer
-     * @return MTRetCode
+     * @param  MTDealAnswer $dealAnswer
+     * @return int
      */
-    private function ParseDeal($command, &$answer, &$deal_answer)
+    private function ParseDeal($command, &$answer, &$dealAnswer)
     {
         $pos = 0;
         //--- get command answer
-        $command_real = $this->m_connect->GetCommand($answer, $pos);
-        if ($command_real != $command)
+        $commandReal = $this->connection->GetCommand($answer, $pos);
+        if ($commandReal != $command)
             return MTRetCode::MT_RET_ERR_DATA;
         //---
-        $deal_answer = new MTDealAnswer();
+        $dealAnswer = new MTDealAnswer();
         //--- get param
-        $pos_end = -1;
-        while (($param = $this->m_connect->GetNextParam($answer, $pos, $pos_end)) != null) {
+        $posEnd = -1;
+        while (($param = $this->connection->GetNextParam($answer, $pos, $posEnd)) != null) {
             switch ($param['name']) {
                 case MTProtocolConsts::WEB_PARAM_RETCODE:
-                    $deal_answer->RetCode = $param['value'];
+                    $dealAnswer->RetCode = $param['value'];
                     break;
             }
         }
         //--- check ret code
-        if (($ret_code = MTConnect::GetRetCode($deal_answer->RetCode)) != MTRetCode::MT_RET_OK)
-            return $ret_code;
+        if (($retCode = MTConnect::GetRetCode($dealAnswer->RetCode)) != MTRetCode::MT_RET_OK)
+            return $retCode;
         //--- get json
-        if (($deal_answer->ConfigJson = $this->m_connect->GetJson($answer, $pos_end)) == null)
+        if (($dealAnswer->ConfigJson = $this->connection->GetJson($answer, $posEnd)) == null)
             return MTRetCode::MT_RET_REPORT_NODATA;
         //---
         return MTRetCode::MT_RET_OK;
@@ -89,32 +84,32 @@ class MTDealProtocol
     /**
      * check answer from MetaTrader 5 server
      * @param  string $answer - answer from server
-     * @param  MTDealPageAnswer $deal_answer
-     * @return MTRetCode
+     * @param  MTDealPageAnswer $dealAnswer
+     * @return int
      */
-    private function ParseDealPage(&$answer, &$deal_answer)
+    private function ParseDealPage(&$answer, &$dealAnswer)
     {
         $pos = 0;
         //--- get command answer
-        $command_real = $this->m_connect->GetCommand($answer, $pos);
-        if ($command_real != MTProtocolConsts::WEB_CMD_DEAL_GET_PAGE)
+        $commandReal = $this->connection->GetCommand($answer, $pos);
+        if ($commandReal != MTProtocolConsts::WEB_CMD_DEAL_GET_PAGE)
             return MTRetCode::MT_RET_ERR_DATA;
         //---
-        $deal_answer = new MTDealPageAnswer();
+        $dealAnswer = new MTDealPageAnswer();
         //--- get param
-        $pos_end = -1;
-        while (($param = $this->m_connect->GetNextParam($answer, $pos, $pos_end)) != null) {
+        $posEnd = -1;
+        while (($param = $this->connection->GetNextParam($answer, $pos, $posEnd)) != null) {
             switch ($param['name']) {
                 case MTProtocolConsts::WEB_PARAM_RETCODE:
-                    $deal_answer->RetCode = $param['value'];
+                    $dealAnswer->RetCode = $param['value'];
                     break;
             }
         }
         //--- check ret code
-        if (($ret_code = MTConnect::GetRetCode($deal_answer->RetCode)) != MTRetCode::MT_RET_OK)
-            return $ret_code;
+        if (($retCode = MTConnect::GetRetCode($dealAnswer->RetCode)) != MTRetCode::MT_RET_OK)
+            return $retCode;
         //--- get json
-        if (($deal_answer->ConfigJson = $this->m_connect->GetJson($answer, $pos_end)) == null)
+        if (($dealAnswer->ConfigJson = $this->connection->GetJson($answer, $posEnd)) == null)
             return MTRetCode::MT_RET_REPORT_NODATA;
         //---
         return MTRetCode::MT_RET_OK;
@@ -125,32 +120,26 @@ class MTDealProtocol
      * @param int $from - date from
      * @param int $to - date to
      * @param int $total - count of users positions
-     * @return MTRetCode
+     * @return int
      */
     public function DealGetTotal($login, $from, $to, &$total)
     {
         //--- send request
         $data = array(MTProtocolConsts::WEB_PARAM_LOGIN => $login, MTProtocolConsts::WEB_PARAM_FROM => $from, MTProtocolConsts::WEB_PARAM_TO => $to);
         //---
-        if (!$this->m_connect->Send(MTProtocolConsts::WEB_CMD_DEAL_GET_TOTAL, $data)) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'send deal get total failed');
+        if (!$this->connection->Send(MTProtocolConsts::WEB_CMD_DEAL_GET_TOTAL, $data)) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- get answer
-        if (($answer = $this->m_connect->Read()) == null) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'answer deal get total is empty');
+        if (($answer = $this->connection->Read()) == null) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- parse answer
-        if (($error_code = $this->ParseDealTotal($answer, $deal_answer)) != MTRetCode::MT_RET_OK) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'parse deal get total failed: [' . $error_code . ']' . MTRetCode::GetError($error_code));
-            return $error_code;
+        if (($errorCode = $this->ParseDealTotal($answer, $dealAnswer)) != MTRetCode::MT_RET_OK) {
+            return $errorCode;
         }
         //--- get total
-        $total = $deal_answer->Total;
+        $total = $dealAnswer->Total;
         //---
         return MTRetCode::MT_RET_OK;
     }
@@ -162,65 +151,59 @@ class MTDealProtocol
      * @param int $offset - begin records number
      * @param int $total - total records need
      * @param array(MTDeal) $deals
-     * @return MTRetCode
+     * @return int
      */
     public function DealGetPage($login, $from, $to, $offset, $total, &$deals)
     {
         //--- send request
         $data = array(MTProtocolConsts::WEB_PARAM_LOGIN => $login, MTProtocolConsts::WEB_PARAM_FROM => $from, MTProtocolConsts::WEB_PARAM_TO => $to, MTProtocolConsts::WEB_PARAM_OFFSET => $offset, MTProtocolConsts::WEB_PARAM_TOTAL => $total);
         //---
-        if (!$this->m_connect->Send(MTProtocolConsts::WEB_CMD_DEAL_GET_PAGE, $data)) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'send deal get page failed');
+        if (!$this->connection->Send(MTProtocolConsts::WEB_CMD_DEAL_GET_PAGE, $data)) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- get answer
-        if (($answer = $this->m_connect->Read()) == null) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'answer deal get page is empty');
+        if (($answer = $this->connection->Read()) == null) {
             return MTRetCode::MT_RET_ERR_NETWORK;
         }
         //--- parse answer
-        if (($error_code = $this->ParseDealPage($answer, $deal_answer)) != MTRetCode::MT_RET_OK) {
-            if (MTLogger::getIsWriteLog())
-                MTLogger::write(MTLoggerType::ERROR, 'parse deal get page failed: [' . $error_code . ']' . MTRetCode::GetError($error_code));
-            return $error_code;
+        if (($errorCode = $this->ParseDealPage($answer, $dealAnswer)) != MTRetCode::MT_RET_OK) {
+            return $errorCode;
         }
         //--- get object from json
-        $deals = $deal_answer->GetArrayFromJson();
+        $deals = $dealAnswer->GetArrayFromJson();
         //---
         return MTRetCode::MT_RET_OK;
     }
     /**
      * Check answer from MetaTrader 5 server
      * @param  $answer string server answer
-     * @param  $deal_answer MTDealTotalAnswer
-     * @return false
+     * @param  $dealAnswer MTDealTotalAnswer
+     * @return int
      */
-    private function ParseDealTotal(&$answer, &$deal_answer)
+    private function ParseDealTotal(&$answer, &$dealAnswer)
     {
         $pos = 0;
         //--- get command answer
-        $command = $this->m_connect->GetCommand($answer, $pos);
+        $command = $this->connection->GetCommand($answer, $pos);
         if ($command != MTProtocolConsts::WEB_CMD_DEAL_GET_TOTAL)
             return MTRetCode::MT_RET_ERR_DATA;
         //---
-        $deal_answer = new MTDealTotalAnswer();
+        $dealAnswer = new MTDealTotalAnswer();
         //--- get param
-        $pos_end = -1;
-        while (($param = $this->m_connect->GetNextParam($answer, $pos, $pos_end)) != null) {
+        $posEnd = -1;
+        while (($param = $this->connection->GetNextParam($answer, $pos, $posEnd)) != null) {
             switch ($param['name']) {
                 case MTProtocolConsts::WEB_PARAM_RETCODE:
-                    $deal_answer->RetCode = $param['value'];
+                    $dealAnswer->RetCode = $param['value'];
                     break;
                 case MTProtocolConsts::WEB_PARAM_TOTAL:
-                    $deal_answer->Total = (int) $param['value'];
+                    $dealAnswer->Total = (int) $param['value'];
                     break;
             }
         }
         //--- check ret code
-        if (($ret_code = MTConnect::GetRetCode($deal_answer->RetCode)) != MTRetCode::MT_RET_OK)
-            return $ret_code;
+        if (($retCode = MTConnect::GetRetCode($dealAnswer->RetCode)) != MTRetCode::MT_RET_OK)
+            return $retCode;
         //---
         return MTRetCode::MT_RET_OK;
     }
