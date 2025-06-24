@@ -26,6 +26,6 @@ class TestMetaTrader extends Command
      */
     public function handle()
     {
-        $client = new MetaTraderClient();
+        // 
     }
 }

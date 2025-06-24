@@ -175,6 +175,7 @@ class MTConnect
         //---
         $queryBody = mb_convert_encoding($q, "utf-16le", "utf-8");
         //--- if need we crypt packet, crypt did not for auth_start and auth_start_answer
+        $lenQuery = 0; // Initialize the variable
         if ($command != MTProtocolConsts::WEB_CMD_AUTH_START && $command != MTProtocolConsts::WEB_CMD_AUTH_ANSWER && $this->isCrypt) {
             $queryBody = $this->CryptPacket($queryBody, strlen($queryBody), $lenQuery);
         } else
