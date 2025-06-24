@@ -36,7 +36,7 @@ The package will automatically register its service provider and facade.
 Publish the configuration file:
 
 ```bash
-php artisan vendor:publish --tag="meta-trader-client.config"
+php artisan vendor:publish --tag="meta-trader-client-config"
 ```
 
 This will create a `config/meta-trader-client.php` file with the following content:
@@ -513,6 +513,9 @@ This package includes a [Workbench](https://packages.tools/workbench) environmen
 
 - **Test Connection**: `php vendor/bin/testbench test:mt5`
 - **Demo Mode**: `php vendor/bin/testbench test:mt5 --demo`
+- **Status Check**: `php vendor/bin/testbench mt5:status`
+- **Configuration Only**: `php vendor/bin/testbench mt5:status --config`
+- **Connection Test Only**: `php vendor/bin/testbench mt5:status --test`
 - **Serve Application**: `composer run serve` (if configured)
 
 The workbench command provides a comprehensive test of your MT5 connection including:
@@ -520,6 +523,49 @@ The workbench command provides a comprehensive test of your MT5 connection inclu
 - Authentication testing
 - Server information retrieval
 - Error handling demonstration
+
+### Package Information
+
+View package information using Laravel's built-in about command:
+
+```bash
+php artisan about
+```
+
+This will display MetaTrader Client information including version, WebAPI details, and Laravel compatibility.
+
+### Publishing Options
+
+The package follows Laravel's best practices for publishable resources:
+
+```bash
+# Publish configuration file only
+php artisan vendor:publish --tag=meta-trader-client-config
+
+# Publish using generic tag
+php artisan vendor:publish --tag=config --provider="Aleedhillon\MetaTraderClient\MetaTraderClientServiceProvider"
+
+# Publish all package resources
+php artisan vendor:publish --provider="Aleedhillon\MetaTraderClient\MetaTraderClientServiceProvider"
+```
+
+### Artisan Commands
+
+The package includes helpful Artisan commands:
+
+```bash
+# Check MT5 status and configuration
+php artisan mt5:status
+
+# Show configuration only
+php artisan mt5:status --config
+
+# Test connection only
+php artisan mt5:status --test
+
+# View package information
+php artisan about
+```
 
 ## 🔧 Advanced Usage
 

@@ -3,6 +3,7 @@
 namespace Aleedhillon\MetaTraderClient;
 
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Foundation\Console\AboutCommand;
 
 class MetaTraderClientServiceProvider extends ServiceProvider
 {
@@ -13,10 +14,9 @@ class MetaTraderClientServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Publishing is only necessary when using the CLI.
-        if ($this->app->runningInConsole()) {
-            $this->bootForConsole();
-        }
+        $this->registerPublishing();
+        $this->registerCommands();
+        $this->registerAboutCommand();
     }
 
     /**
@@ -55,15 +55,89 @@ class MetaTraderClientServiceProvider extends ServiceProvider
     }
 
     /**
-     * Console-specific booting.
+     * Register package publishing options.
      *
      * @return void
      */
-    protected function bootForConsole(): void
+    protected function registerPublishing(): void
     {
-        // Publishing the configuration file.
-        $this->publishes([
-            __DIR__ . '/../config/meta-trader-client.php' => config_path('meta-trader-client.php'),
-        ], 'meta-trader-client.config');
+        if ($this->app->runningInConsole()) {
+            // Publishing the configuration file with proper tagging
+            $this->publishes([
+                __DIR__ . '/../config/meta-trader-client.php' => config_path('meta-trader-client.php'),
+            ], ['meta-trader-client-config', 'config']);
+
+            // If you have views, you would publish them like this:
+            // $this->publishes([
+            //     __DIR__ . '/../resources/views' => resource_path('views/vendor/meta-trader-client'),
+            // ], ['meta-trader-client-views', 'views']);
+
+            // If you have assets, you would publish them like this:
+            // $this->publishes([
+            //     __DIR__ . '/../public' => public_path('vendor/meta-trader-client'),
+            // ], ['meta-trader-client-assets', 'public']);
+
+            // If you have language files, you would publish them like this:
+            // $this->publishes([
+            //     __DIR__ . '/../lang' => $this->app->langPath('vendor/meta-trader-client'),
+            // ], ['meta-trader-client-lang', 'lang']);
+        }
+    }
+
+    /**
+     * Register package commands.
+     *
+     * @return void
+     */
+    protected function registerCommands(): void
+    {
+        if ($this->app->runningInConsole()) {
+            // Register package commands
+            $this->commands([
+                Console\Commands\StatusCommand::class,
+            ]);
+
+            // Register workbench commands if they exist
+            if (class_exists(\Workbench\App\Console\TestMetaTrader::class)) {
+                $this->commands([
+                    \Workbench\App\Console\TestMetaTrader::class,
+                ]);
+            }
+        }
+    }
+
+    /**
+     * Register information in the "About" artisan command.
+     *
+     * @return void
+     */
+    protected function registerAboutCommand(): void
+    {
+        if (class_exists(AboutCommand::class)) {
+            AboutCommand::add('MetaTrader Client', fn() => [
+                'Version' => $this->getPackageVersion(),
+                'WebAPI Version' => defined('WebAPIVersion') ? WebAPIVersion : 'Unknown',
+                'WebAPI Date' => defined('WebAPIDate') ? WebAPIDate : 'Unknown',
+                'PHP Version' => PHP_VERSION,
+                'Laravel Support' => '^12.18',
+            ]);
+        }
+    }
+
+    /**
+     * Get the package version from composer.json.
+     *
+     * @return string
+     */
+    protected function getPackageVersion(): string
+    {
+        $composerFile = __DIR__ . '/../composer.json';
+
+        if (file_exists($composerFile)) {
+            $composer = json_decode(file_get_contents($composerFile), true);
+            return $composer['version'] ?? 'dev-main';
+        }
+
+        return 'unknown';
     }
 }
