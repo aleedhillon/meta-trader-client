@@ -483,6 +483,44 @@ $version = MetaTraderClient::getVersionInfo();
 echo "MT5 Web API Version: " . $version['web_api_version'];
 ```
 
+## 🧪 Development & Testing
+
+### Using Workbench
+
+This package includes a [Workbench](https://packages.tools/workbench) environment for development and testing. The workbench provides a complete Laravel application environment to test the package functionality.
+
+#### Setup Workbench
+
+1. Copy the environment file:
+   ```bash
+   cp workbench/.env.example workbench/.env
+   ```
+
+2. Configure your MT5 server details in `workbench/.env`:
+   ```env
+   MT5_SERVER_IP=your.mt5server.com
+   MT5_SERVER_PORT=443
+   MT5_SERVER_WEB_LOGIN=your_web_api_login
+   MT5_SERVER_WEB_PASSWORD=your_web_api_password
+   ```
+
+3. Test the connection:
+   ```bash
+   php vendor/bin/testbench test:mt5
+   ```
+
+#### Available Commands
+
+- **Test Connection**: `php vendor/bin/testbench test:mt5`
+- **Demo Mode**: `php vendor/bin/testbench test:mt5 --demo`
+- **Serve Application**: `composer run serve` (if configured)
+
+The workbench command provides a comprehensive test of your MT5 connection including:
+- Server connectivity validation
+- Authentication testing
+- Server information retrieval
+- Error handling demonstration
+
 ## 🔧 Advanced Usage
 
 ### Error Code to Exception Mapping
