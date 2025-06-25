@@ -62,25 +62,10 @@ class MetaTraderClientServiceProvider extends ServiceProvider
     protected function registerPublishing(): void
     {
         if ($this->app->runningInConsole()) {
-            // Publishing the configuration file with proper tagging
+            // Publishing the configuration file with package-specific tag
             $this->publishes([
                 __DIR__ . '/../config/meta-trader-client.php' => config_path('meta-trader-client.php'),
-            ], ['meta-trader-client-config', 'config']);
-
-            // If you have views, you would publish them like this:
-            // $this->publishes([
-            //     __DIR__ . '/../resources/views' => resource_path('views/vendor/meta-trader-client'),
-            // ], ['meta-trader-client-views', 'views']);
-
-            // If you have assets, you would publish them like this:
-            // $this->publishes([
-            //     __DIR__ . '/../public' => public_path('vendor/meta-trader-client'),
-            // ], ['meta-trader-client-assets', 'public']);
-
-            // If you have language files, you would publish them like this:
-            // $this->publishes([
-            //     __DIR__ . '/../lang' => $this->app->langPath('vendor/meta-trader-client'),
-            // ], ['meta-trader-client-lang', 'lang']);
+            ], 'meta-trader-client-config');
         }
     }
 

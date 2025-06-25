@@ -36,7 +36,11 @@ The package will automatically register its service provider and facade.
 Publish the configuration file:
 
 ```bash
-php artisan vendor:publish --tag="meta-trader-client-config"
+# Publish configuration file only
+php artisan vendor:publish --tag=meta-trader-client-config
+
+# Or publish all package resources using provider flag
+php artisan vendor:publish --provider="Aleedhillon\MetaTraderClient\MetaTraderClientServiceProvider"
 ```
 
 This will create a `config/meta-trader-client.php` file with the following content:
@@ -534,20 +538,16 @@ php artisan about
 
 This will display MetaTrader Client information including version, WebAPI details, and Laravel compatibility.
 
-### Publishing Options
+### Advanced Publishing Options
 
-The package follows Laravel's best practices for publishable resources:
+For more specific publishing needs, you can also use:
 
 ```bash
-# Publish configuration file only
-php artisan vendor:publish --tag=meta-trader-client-config
-
-# Publish using generic tag
-php artisan vendor:publish --tag=config --provider="Aleedhillon\MetaTraderClient\MetaTraderClientServiceProvider"
-
-# Publish all package resources
+# Publish all package resources using provider flag (alternative method)
 php artisan vendor:publish --provider="Aleedhillon\MetaTraderClient\MetaTraderClientServiceProvider"
 ```
+
+**Note**: The `--provider` flag publishes all publishable files defined by the package's service provider, giving you access to all available resources in one command.
 
 ### Artisan Commands
 
