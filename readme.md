@@ -122,7 +122,7 @@ use Aleedhillon\MetaTraderClient\Facades\MetaTraderClient;
 try {
     // The client automatically connects when needed
     $serverTime = MetaTraderClient::timeGet();
-    echo "Server time: " . $serverTime->TimeServer;
+    echo "Server time: " . (is_string($serverTime->TimeServer) ? $serverTime->TimeServer : date('Y-m-d H:i:s', $serverTime->TimeServer));
     
     // Check connection status
     if (MetaTraderClient::isConnected()) {
@@ -406,7 +406,7 @@ Server operations with modern exception handling:
 try {
     // Get server time
     $time = MetaTraderClient::timeGet();
-    echo "Server time: " . date('Y-m-d H:i:s', $time->TimeServer);
+    echo "Server time: " . (is_string($time->TimeServer) ? $time->TimeServer : date('Y-m-d H:i:s', $time->TimeServer));
 
     // Get server time as Unix timestamp
     $timestamp = MetaTraderClient::timeServer();

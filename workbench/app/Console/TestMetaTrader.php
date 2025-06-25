@@ -77,7 +77,14 @@ class TestMetaTrader extends Command
             // Test server time
             $this->info('⏰ Getting server time...');
             $time = $client->timeGet();
-            $this->info('📅 Server Time: ' . date('Y-m-d H:i:s', $time->TimeServer));
+
+            // Handle TimeServer property - it might be string or int
+            $serverTime = $time->TimeServer;
+            if (is_string($serverTime)) {
+                $this->info('📅 Server Time: ' . $serverTime);
+            } else {
+                $this->info('📅 Server Time: ' . date('Y-m-d H:i:s', $serverTime));
+            }
 
             // Test server information
             $this->info('ℹ️ Getting server information...');

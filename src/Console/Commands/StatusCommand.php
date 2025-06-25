@@ -107,7 +107,14 @@ class StatusCommand extends Command
             $duration = round(($endTime - $startTime) * 1000, 2);
 
             $this->info("✅ Connection successful! ({$duration}ms)");
-            $this->info('📅 Server Time: ' . date('Y-m-d H:i:s', $time->TimeServer));
+
+            // Handle TimeServer property - it might be string or int
+            $serverTime = $time->TimeServer;
+            if (is_string($serverTime)) {
+                $this->info('📅 Server Time: ' . $serverTime);
+            } else {
+                $this->info('📅 Server Time: ' . date('Y-m-d H:i:s', $serverTime));
+            }
 
             // Get server info
             $common = MetaTraderClient::commonGet();
