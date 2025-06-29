@@ -551,18 +551,144 @@ php artisan vendor:publish --provider="Aleedhillon\MetaTraderClient\MetaTraderCl
 
 ### Artisan Commands
 
-The package includes helpful Artisan commands:
+The package includes comprehensive Artisan commands to help you manage and monitor your MT5 integration:
+
+#### `mt5:status` - Comprehensive Status Report
+
+Display a complete status report of your MT5 server connection, configuration, and statistics.
 
 ```bash
-# Check MT5 status and configuration
 php artisan mt5:status
+```
 
-# Show configuration only
-php artisan mt5:status --config
+**What it shows:**
+- ✅ Configuration settings and validation
+- 🔍 Connection status and response time
+- 🖥️ Server information (name, owner, product)
+- 📊 Server statistics (users, deals, orders, positions)
+- 📝 License information and expiration dates
+- 🔢 Version information (package, API, PHP, Laravel)
+- 👥 Groups sample (first 5 groups)
+- 📈 Symbols sample (first 5 symbols)
 
-# Test connection only
-php artisan mt5:status --test
+**Example output:**
+```
+🚀 MetaTrader 5 Comprehensive Status Report
+═══════════════════════════════════════════
 
+📋 Configuration Settings
+──────────────────────────
+┌─────────────────┬─────────────────┬─────────────────────────┐
+│ Setting         │ Value           │ Environment Variable    │
+├─────────────────┼─────────────────┼─────────────────────────┤
+│ Agent           │ WebAPI          │ MT5_AGENT               │
+│ Encryption      │ Enabled         │ MT5_SHOULD_CRYPT       │
+│ Server IP       │ 192.168.1.100   │ MT5_SERVER_IP          │
+│ Server Port     │ 443             │ MT5_SERVER_PORT        │
+│ Login           │ ***123          │ MT5_SERVER_WEB_LOGIN   │
+│ Password        │ ***********     │ MT5_SERVER_WEB_PASSWORD │
+│ Timeout         │ 30s             │ MT5_SERVER_TIMEOUT     │
+└─────────────────┴─────────────────┴─────────────────────────┘
+✅ Configuration is complete
+
+🔍 Connection Status
+───────────────────
+✅ Connection successful! (245.67ms)
+📅 Server Time: 2024-01-15 14:30:45 UTC
+🏓 Ping: Successful
+
+🖥️ Server Information
+─────────────────────
+┌─────────────────┬─────────────────────────────────┐
+│ Property        │ Value                           │
+├─────────────────┼─────────────────────────────────┤
+│ Server Name     │ MetaTrader 5 Demo Server        │
+│ Owner           │ MetaQuotes Software Corp.       │
+│ Owner ID        │ 12345                           │
+│ Owner Host      │ demo.mt5server.com              │
+│ Owner Email     │ admin@mt5server.com             │
+│ Product         │ MetaTrader 5                    │
+│ Account URL     │ https://demo.mt5server.com      │
+│ Account Auto    │ Yes                             │
+│ Live Update Mode│ 1                               │
+└─────────────────┴─────────────────────────────────┘
+
+📊 Server Statistics
+────────────────────
+┌──────────────────┬─────────┐
+│ Metric           │ Count   │
+├──────────────────┼─────────┤
+│ Total Users      │ 15,432  │
+│ Real Users       │ 8,765   │
+│ Total Deals      │ 45,678  │
+│ Total Orders     │ 12,345  │
+│ History Orders   │ 98,765  │
+│ Total Positions  │ 1,234   │
+│ Total Groups     │ 25      │
+│ Total Symbols    │ 156     │
+└──────────────────┴─────────┘
+
+📝 License Information
+─────────────────────
+┌─────────────────────┬─────────────────────┐
+│ License Property    │ Value               │
+├─────────────────────┼─────────────────────┤
+│ License Expiration  │ 2024-12-31 23:59:59 │
+│ Support Expiration  │ 2024-12-31 23:59:59 │
+│ Trade Servers Limit │ 10                  │
+│ Web Servers Limit   │ 5                   │
+│ Accounts Limit      │ 100,000             │
+│ Deals Limit         │ 10,000,000          │
+│ Symbols Limit       │ 1,000               │
+│ Groups Limit        │ 100                 │
+└─────────────────────┴─────────────────────┘
+
+🔢 Version Information
+─────────────────────
+┌─────────────────┬─────────────┐
+│ Component       │ Version     │
+├─────────────────┼─────────────┤
+│ Package Version │ 2.0.0       │
+│ Web API Version │ 5.0.3775    │
+│ Build           │ 3775        │
+│ API Version     │ 5.0         │
+│ PHP Version     │ 8.4.0       │
+│ Laravel Version │ 11.0.0      │
+└─────────────────┴─────────────┘
+
+👥 Groups Sample (First 5)
+─────────────────────────
+┌────────────┬─────────────────┬──────────┬──────────┬───────┐
+│ Group Name │ Company         │ Currency │ Leverage │ Users │
+├────────────┼─────────────────┼──────────┼──────────┼───────┤
+│ demo       │ Demo Company    │ USD      │ 100      │ 1,234 │
+│ real       │ Real Company    │ USD      │ 50       │ 5,678 │
+│ vip        │ VIP Company     │ USD      │ 200      │ 98    │
+│ cent       │ Cent Company    │ USD      │ 1,000    │ 456   │
+│ ecn        │ ECN Company     │ USD      │ 30       │ 789   │
+└────────────┴─────────────────┴──────────┴──────────┴───────┘
+
+📈 Symbols Sample (First 5)
+──────────────────────────
+┌────────┬─────────────────┬───────────────┬─────────────────┬────────────┐
+│ Symbol │ Description     │ Base Currency │ Profit Currency │ Path       │
+├────────┼─────────────────┼───────────────┼─────────────────┼────────────┤
+│ EURUSD │ Euro vs US Dollar│ EUR          │ USD             │ Forex\Major│
+│ GBPUSD │ British Pound vs USD│ GBP      │ USD             │ Forex\Major│
+│ USDJPY │ US Dollar vs Yen│ USD          │ JPY             │ Forex\Major│
+│ USDCHF │ US Dollar vs Franc│ USD        │ CHF             │ Forex\Major│
+│ AUDUSD │ Australian Dollar vs USD│ AUD  │ USD             │ Forex\Major│
+└────────┴─────────────────┴───────────────┴─────────────────┴────────────┘
+
+═══════════════════════════════════════════
+📋 Status report completed at 2024-01-15 14:30:47 UTC
+
+💡 Tip: Configure missing settings with: php artisan vendor:publish --tag=meta-trader-client-config
+```
+
+#### General Laravel Commands
+
+```bash
 # View package information
 php artisan about
 ```
@@ -628,6 +754,458 @@ try {
 | `login`        | `MT5_SERVER_WEB_LOGIN`    | `null`   | Web API login                        |
 | `password`     | `MT5_SERVER_WEB_PASSWORD` | `null`   | Web API password                     |
 | `timeout`      | `MT5_SERVER_TIMEOUT`      | `30`     | Connection timeout in seconds        |
+
+## 📚 Complete API Reference
+
+### Connection Management
+
+#### `connect()` - Manual Connection
+```php
+MetaTraderClient::connect();
+```
+*Note: Connection is handled automatically, manual connection is optional.*
+
+#### `disconnect()` - Manual Disconnection
+```php
+MetaTraderClient::disconnect();
+```
+
+#### `isConnected()` - Check Connection Status
+```php
+$connected = MetaTraderClient::isConnected();
+```
+
+#### `ping()` - Test Server Response
+```php
+MetaTraderClient::ping();
+```
+
+### Server Information
+
+#### `timeGet()` - Get Detailed Time Information
+```php
+$timeInfo = MetaTraderClient::timeGet();
+echo "Timezone: " . $timeInfo->TimeZone;
+echo "Daylight: " . $timeInfo->Daylight;
+```
+
+#### `timeServer()` - Get Server Timestamp
+```php
+$timestamp = MetaTraderClient::timeServer();
+echo "Server time: " . date('Y-m-d H:i:s', $timestamp);
+```
+
+#### `commonGet()` - Get Server Information
+```php
+$serverInfo = MetaTraderClient::commonGet();
+echo "Server: " . $serverInfo->Name;
+echo "Owner: " . $serverInfo->Owner;
+echo "Total Users: " . number_format($serverInfo->TotalUsers);
+```
+
+#### `serverRestart()` - Restart Server (Admin Only)
+```php
+MetaTraderClient::serverRestart();
+```
+
+### User Management
+
+#### `userCreate()` - Create User Template
+```php
+$user = MetaTraderClient::userCreate();
+$user->Name = 'John Doe';
+$user->Email = 'john@example.com';
+$user->Group = 'demo';
+```
+
+#### `userAdd()` - Add New User
+```php
+$user = MetaTraderClient::userCreate();
+$user->Name = 'John Doe';
+$user->Email = 'john@example.com';
+$user->Group = 'demo';
+$user->Leverage = 100;
+$user->MainPassword = 'password123';
+
+$newUser = MetaTraderClient::userAdd($user);
+echo "New user login: " . $newUser->Login;
+```
+
+#### `userGet()` - Get User Information
+```php
+$user = MetaTraderClient::userGet(123456);
+echo "User: " . $user->Name . " (" . $user->Email . ")";
+echo "Group: " . $user->Group;
+echo "Balance: " . $user->Balance;
+```
+
+#### `userUpdate()` - Update User Information
+```php
+$user = MetaTraderClient::userGet(123456);
+$user->Leverage = 200;
+$user->Email = 'newemail@example.com';
+
+$updatedUser = MetaTraderClient::userUpdate($user);
+```
+
+#### `userDelete()` - Delete User
+```php
+MetaTraderClient::userDelete(123456);
+```
+
+#### `userPasswordCheck()` - Verify User Password
+```php
+$isValid = MetaTraderClient::userPasswordCheck(123456, 'password123');
+if ($isValid) {
+    echo "Password is correct";
+}
+```
+
+#### `userPasswordChange()` - Change User Password
+```php
+MetaTraderClient::userPasswordChange(123456, 'newpassword123');
+```
+
+#### `userDepositChange()` - Change User Balance
+```php
+use Aleedhillon\MetaTraderClient\Lib\MTEnDealAction;
+
+MetaTraderClient::userDepositChange(
+    123456,                      // User login
+    1000.00,                     // Amount
+    'API deposit',               // Comment
+    MTEnDealAction::DEAL_BALANCE // Deal type
+);
+```
+
+#### `userAccountGet()` - Get Account Information
+```php
+$account = MetaTraderClient::userAccountGet(123456);
+echo "Balance: " . $account->Balance;
+echo "Equity: " . $account->Equity;
+echo "Margin: " . $account->Margin;
+echo "Free Margin: " . $account->MarginFree;
+```
+
+#### `userLogins()` - Get User Logins by Group
+```php
+$logins = MetaTraderClient::userLogins('demo'); // Get all demo users
+$logins = MetaTraderClient::userLogins('*');    // Get all users
+
+foreach ($logins as $login) {
+    echo "Login: " . $login;
+}
+```
+
+### Trading Operations
+
+#### `orderGet()` - Get Order Information
+```php
+$order = MetaTraderClient::orderGet(987654);
+echo "Symbol: " . $order->Symbol;
+echo "Volume: " . $order->VolumeInitial;
+echo "Price: " . $order->PriceOpen;
+```
+
+#### `orderGetTotal()` - Get Total Orders Count
+```php
+$orderCount = MetaTraderClient::orderGetTotal(123456);
+echo "Total orders: " . $orderCount;
+```
+
+#### `orderGetPage()` - Get Orders by Page
+```php
+$orders = MetaTraderClient::orderGetPage(123456, 0, 10); // Page 0, 10 items
+foreach ($orders as $order) {
+    echo "Order " . $order->Order . ": " . $order->Symbol;
+}
+```
+
+#### `positionGet()` - Get Position Information
+```php
+$position = MetaTraderClient::positionGet(123456, 'EURUSD');
+echo "Symbol: " . $position->Symbol;
+echo "Volume: " . $position->Volume;
+echo "Profit: " . $position->Profit;
+```
+
+#### `positionGetTotal()` - Get Total Positions Count
+```php
+$positionCount = MetaTraderClient::positionGetTotal(123456);
+```
+
+#### `positionGetPage()` - Get Positions by Page
+```php
+$positions = MetaTraderClient::positionGetPage(123456, 0, 10);
+foreach ($positions as $position) {
+    echo "Position: " . $position->Symbol . " Profit: " . $position->Profit;
+}
+```
+
+#### `dealGet()` - Get Deal Information
+```php
+$deal = MetaTraderClient::dealGet(789012);
+echo "Symbol: " . $deal->Symbol;
+echo "Volume: " . $deal->Volume;
+echo "Price: " . $deal->Price;
+```
+
+#### `dealGetTotal()` - Get Total Deals Count
+```php
+$dealCount = MetaTraderClient::dealGetTotal(
+    123456,                    // User login
+    strtotime('-1 week'),      // From date
+    time()                     // To date
+);
+```
+
+#### `dealGetPage()` - Get Deals by Page
+```php
+$deals = MetaTraderClient::dealGetPage(
+    123456,                    // User login
+    strtotime('-1 week'),      // From date
+    time(),                    // To date
+    0,                         // Page
+    10                         // Count
+);
+```
+
+#### `historyGet()` - Get History Order
+```php
+$historyOrder = MetaTraderClient::historyGet(456789);
+```
+
+#### `historyGetTotal()` - Get History Count
+```php
+$historyCount = MetaTraderClient::historyGetTotal(
+    123456,                    // User login
+    strtotime('-1 month'),     // From date
+    time()                     // To date
+);
+```
+
+#### `historyGetPage()` - Get History by Page
+```php
+$historyOrders = MetaTraderClient::historyGetPage(
+    123456,                    // User login
+    strtotime('-1 month'),     // From date
+    time(),                    // To date
+    0,                         // Page
+    10                         // Count
+);
+```
+
+#### `tradeBalance()` - Execute Balance Operation
+```php
+use Aleedhillon\MetaTraderClient\Lib\MTEnDealAction;
+
+$ticket = MetaTraderClient::tradeBalance(
+    123456,                      // User login
+    MTEnDealAction::DEAL_BALANCE, // Operation type
+    1000.00,                     // Amount
+    'Deposit via API',           // Comment
+    true                         // Margin check
+);
+
+if ($ticket) {
+    echo "Balance operation ticket: " . $ticket;
+}
+```
+
+### Market Data
+
+#### `symbolGet()` - Get Symbol Information
+```php
+$symbol = MetaTraderClient::symbolGet('EURUSD');
+echo "Symbol: " . $symbol->Symbol;
+echo "Digits: " . $symbol->Digits;
+echo "Spread: " . $symbol->Spread;
+```
+
+#### `symbolTotal()` - Get Total Symbols Count
+```php
+$symbolCount = MetaTraderClient::symbolTotal();
+```
+
+#### `symbolNext()` - Get Symbol by Position
+```php
+$symbol = MetaTraderClient::symbolNext(0); // First symbol
+```
+
+#### `symbolGetGroup()` - Get Symbol by Group
+```php
+$symbol = MetaTraderClient::symbolGetGroup('EURUSD', 'demo');
+```
+
+#### `symbolCreate()` - Create Symbol Template
+```php
+$symbol = MetaTraderClient::symbolCreate();
+$symbol->Symbol = 'CUSTOM';
+$symbol->Description = 'Custom Symbol';
+$symbol->CurrencyBase = 'USD';
+$symbol->CurrencyProfit = 'USD';
+```
+
+#### `symbolAdd()` - Add New Symbol
+```php
+$symbol = MetaTraderClient::symbolCreate();
+$symbol->Symbol = 'CUSTOM';
+$symbol->Description = 'Custom Symbol';
+// ... set other properties
+
+$newSymbol = MetaTraderClient::symbolAdd($symbol);
+```
+
+#### `symbolDelete()` - Delete Symbol
+```php
+MetaTraderClient::symbolDelete('OBSOLETE');
+```
+
+#### `tickLast()` - Get Last Ticks
+```php
+$ticks = MetaTraderClient::tickLast('EURUSD');
+foreach ($ticks as $tick) {
+    echo "Tick: " . $tick->Bid . "/" . $tick->Ask;
+}
+```
+
+#### `tickLastGroup()` - Get Last Ticks by Group
+```php
+$ticks = MetaTraderClient::tickLastGroup('EURUSD', 'demo');
+```
+
+#### `tickStat()` - Get Tick Statistics
+```php
+$tickStats = MetaTraderClient::tickStat('EURUSD');
+```
+
+### Group Management
+
+#### `groupTotal()` - Get Total Groups Count
+```php
+$groupCount = MetaTraderClient::groupTotal();
+```
+
+#### `groupNext()` - Get Group by Position
+```php
+$group = MetaTraderClient::groupNext(0); // First group
+echo "Group: " . $group->Group;
+echo "Currency: " . $group->Currency;
+```
+
+#### `groupGet()` - Get Group Information
+```php
+$group = MetaTraderClient::groupGet('demo');
+echo "Group: " . $group->Group;
+echo "Company: " . $group->Company;
+echo "Currency: " . $group->Currency;
+```
+
+#### `groupCreate()` - Create Group Template
+```php
+$group = MetaTraderClient::groupCreate();
+$group->Group = 'new_demo';
+$group->Company = 'Demo Company';
+$group->Currency = 'USD';
+```
+
+#### `groupAdd()` - Add New Group
+```php
+$group = MetaTraderClient::groupCreate();
+$group->Group = 'new_demo';
+$group->Company = 'Demo Company';
+$group->Currency = 'USD';
+// ... set other properties
+
+$newGroup = MetaTraderClient::groupAdd($group);
+```
+
+#### `groupDelete()` - Delete Group
+```php
+MetaTraderClient::groupDelete('old_demo');
+```
+
+### Communication
+
+#### `mailSend()` - Send Email to User
+```php
+MetaTraderClient::mailSend(
+    '123456',                    // User login
+    'Important Notification',     // Subject
+    '<h1>Important Message</h1><p>This is an HTML message.</p>' // HTML body
+);
+```
+
+#### `newsSend()` - Send News
+```php
+MetaTraderClient::newsSend(
+    'Market Update',             // Subject
+    'General',                   // Category
+    1033,                        // Language (English)
+    1,                          // Priority
+    '<h2>Market Update</h2><p>Important market information.</p>' // HTML body
+);
+```
+
+### Custom Commands
+
+#### `customSend()` - Send Custom Command
+```php
+$result = MetaTraderClient::customSend(
+    'YOUR_CUSTOM_COMMAND',
+    ['param1' => 'value1', 'param2' => 'value2'],
+    'Request body'
+);
+
+$answer = $result['answer'];
+$answerBody = $result['answer_body'];
+```
+
+### Utility Methods
+
+#### Error Handling
+```php
+$errorDescription = MetaTraderClient::getErrorDescription(10004);
+echo "Error: " . $errorDescription; // "No connection"
+```
+
+#### Volume Conversion
+```php
+$newVolume = MetaTraderClient::toNewVolume(100);     // Convert 1.00 lots to 1000000
+$oldVolume = MetaTraderClient::toOldVolume(1000000); // Convert back to 100
+```
+
+#### Validation
+```php
+$isValidMode = MetaTraderClient::validateTradeMode(4);          // Returns 4 (TRADE_FULL)
+$isValidSymbol = MetaTraderClient::isValidSymbolName('EURUSD'); // true
+$isValidLogin = MetaTraderClient::isValidLogin(123456);         // true
+```
+
+#### Data Conversion
+```php
+$hexString = MetaTraderClient::binaryToHex('test');                    // Convert to hex
+$binaryData = MetaTraderClient::hexToBinary('74657374');               // Convert from hex
+$escaped = MetaTraderClient::escapeProtocolString('test=value|data');  // Escape special chars
+```
+
+#### Time Utilities
+```php
+$formatted = MetaTraderClient::formatMtTimestamp(time(), 'Y-m-d H:i:s');
+$mtTime = MetaTraderClient::toMtTimestamp(); // Current time
+```
+
+#### Default Values
+```php
+$marginRates = MetaTraderClient::getDefaultMarginRates();
+$randomHex = MetaTraderClient::generateRandomHex(32); // For testing
+```
+
+#### Version Information
+```php
+$version = MetaTraderClient::getVersionInfo();
+echo "MT5 Web API Version: " . $version['web_api_version'];
+```
 
 ## 🔍 Migration from Legacy Code
 
