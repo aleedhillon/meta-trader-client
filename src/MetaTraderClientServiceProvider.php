@@ -79,7 +79,10 @@ class MetaTraderClientServiceProvider extends ServiceProvider
         if ($this->app->runningInConsole()) {
             // Register package commands
             $this->commands([
+                Console\Commands\InfoCommand::class,
                 Console\Commands\StatusCommand::class,
+                Console\Commands\GroupsCommand::class,
+                Console\Commands\SymbolsCommand::class,
             ]);
 
             // Register workbench commands if they exist

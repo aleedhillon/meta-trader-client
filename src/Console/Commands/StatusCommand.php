@@ -20,7 +20,7 @@ class StatusCommand extends Command
      *
      * @var string
      */
-    protected $description = 'Display comprehensive MetaTrader 5 server status, connection information, and statistics';
+    protected $description = 'Display MetaTrader 5 server status, connection information, and statistics';
 
     /**
      * Execute the console command.
@@ -45,12 +45,6 @@ class StatusCommand extends Command
             $this->newLine();
 
             $this->displayVersionInformation();
-            $this->newLine();
-
-            $this->displayGroupSample();
-            $this->newLine();
-
-            $this->displaySymbolSample();
         }
 
         $this->displayFooter();
@@ -63,8 +57,8 @@ class StatusCommand extends Command
      */
     protected function displayHeader(): void
     {
-        $this->info('🚀 MetaTrader 5 Comprehensive Status Report');
-        $this->info('═══════════════════════════════════════════');
+        $this->info('🚀 MetaTrader 5 Server Status Report');
+        $this->info('═══════════════════════════════════════');
         $this->newLine();
     }
 
@@ -85,8 +79,8 @@ class StatusCommand extends Command
                 ['Encryption', $config['should_crypt'] ? 'Enabled' : 'Disabled', 'MT5_SHOULD_CRYPT'],
                 ['Server IP', $config['ip'] ?? 'Not set', 'MT5_SERVER_IP'],
                 ['Server Port', $config['port'] ?? 'Not set', 'MT5_SERVER_PORT'],
-                ['Login', $config['login'] ? '***' . substr($config['login'], -3) : 'Not set', 'MT5_SERVER_WEB_LOGIN'],
-                ['Password', $config['password'] ? '***********' : 'Not set', 'MT5_SERVER_WEB_PASSWORD'],
+                ['Login', $config['login'] ?? 'Not set', 'MT5_SERVER_WEB_LOGIN'],
+                ['Password', $config['password'] ?? 'Not set', 'MT5_SERVER_WEB_PASSWORD'],
                 ['Timeout', ($config['timeout'] ?? 'Not set') . 's', 'MT5_SERVER_TIMEOUT'],
             ]
         );
@@ -119,91 +113,52 @@ class StatusCommand extends Command
                 return ['connected' => false, 'error' => 'Missing configuration'];
             }
 
-            // Show connection attempt details
-            $this->comment("🔗 Attempting connection to {$config['ip']}:{$config['port']}...");
-            $this->comment("🔧 Timeout setting: {$config['timeout']}s");
-
-            // First, test basic network connectivity
-            $this->comment('🌐 Testing network connectivity...');
+            // Test basic network connectivity
             if (!$this->testNetworkConnectivity($config['ip'], $config['port'], $config['timeout'])) {
                 $this->error("❌ Cannot reach server at {$config['ip']}:{$config['port']}");
-                $this->comment("💡 Check if the server is running and accessible from your network");
                 return ['connected' => false, 'error' => 'Network connectivity failed'];
             }
-            $this->comment('✓ Network connectivity confirmed');
 
             $startTime = microtime(true);
 
-            // Test basic connection with progress feedback
-            $this->comment('⏳ Testing server connectivity...');
-
-            // Add timeout handling using set_time_limit
+            // Set timeout for operations
             $originalTimeLimit = ini_get('max_execution_time');
-            set_time_limit(10); // 60 seconds max for this operation
+            set_time_limit(30);
 
             try {
-                $connectionStart = microtime(true);
-                $this->comment('   → Calling timeGet()...');
-
                 $time = MetaTraderClient::timeGet();
-                $connectionTime = round((microtime(true) - $connectionStart) * 1000, 2);
-
-                $this->comment("✓ Server time retrieved ({$connectionTime}ms)");
-            } catch (MetaTraderException $e) {
-                set_time_limit($originalTimeLimit); // Restore original limit
-                $this->error("❌ Failed to get server time: {$e->getMessage()}");
-                $this->error("Error Code: {$e->getMtCode()}");
-                return ['connected' => false, 'error' => $e->getMessage()];
-            } catch (\Exception $e) {
-                set_time_limit($originalTimeLimit); // Restore original limit
-                $this->error("❌ Connection timeout or error: {$e->getMessage()}");
-                return ['connected' => false, 'error' => $e->getMessage()];
-            }
-
-            try {
-                $this->comment('⏳ Getting server timestamp...');
-                $timestampStart = microtime(true);
-                $this->comment('   → Calling timeServer()...');
-
                 $serverTime = MetaTraderClient::timeServer();
-                $timestampTime = round((microtime(true) - $timestampStart) * 1000, 2);
 
-                $this->comment("✓ Server timestamp retrieved ({$timestampTime}ms)");
+                set_time_limit($originalTimeLimit);
+
+                $duration = round((microtime(true) - $startTime) * 1000, 2);
+
+                $this->info("✅ Connection successful! ({$duration}ms)");
+                $this->info('📅 Server Time: ' . date('Y-m-d H:i:s T', $serverTime));
+
+                // Test ping
+                try {
+                    MetaTraderClient::ping();
+                    $this->info('🏓 Ping: Successful');
+                } catch (MetaTraderException $e) {
+                    $this->warn('🏓 Ping: Failed');
+                }
+
+                return ['connected' => true, 'duration' => $duration, 'server_time' => $serverTime];
             } catch (MetaTraderException $e) {
-                $this->warn("⚠️ Failed to get server timestamp, using time info instead");
-                $serverTime = is_string($time->TimeServer) ? strtotime($time->TimeServer) : $time->TimeServer;
+                set_time_limit($originalTimeLimit);
+                $this->error("❌ Failed to connect: {$e->getMessage()}");
+                return ['connected' => false, 'error' => $e->getMessage()];
             } catch (\Exception $e) {
-                $this->warn("⚠️ Timestamp error, using time info instead: {$e->getMessage()}");
-                $serverTime = is_string($time->TimeServer) ? strtotime($time->TimeServer) : $time->TimeServer;
+                set_time_limit($originalTimeLimit);
+                $this->error("❌ Connection error: {$e->getMessage()}");
+                return ['connected' => false, 'error' => $e->getMessage()];
             }
-
-            // Restore original time limit
-            set_time_limit($originalTimeLimit);
-
-            $endTime = microtime(true);
-            $duration = round(($endTime - $startTime) * 1000, 2);
-
-            $this->info("✅ Connection successful! ({$duration}ms)");
-            $this->info('📅 Server Time: ' . date('Y-m-d H:i:s T', $serverTime));
-
-            // Test ping
-            $this->comment('⏳ Testing ping...');
-            try {
-                MetaTraderClient::ping();
-                $this->info('🏓 Ping: Successful');
-            } catch (MetaTraderException $e) {
-                $this->warn('🏓 Ping: Failed - ' . $e->getMessage());
-            }
-
-            return ['connected' => true, 'duration' => $duration, 'server_time' => $serverTime];
         } catch (MetaTraderException $e) {
             $this->error("❌ MT5 Error: {$e->getMessage()}");
-            $this->error("Error Code: {$e->getMtCode()}");
-            $this->comment("💡 Check your server IP, login credentials, and network connectivity");
             return ['connected' => false, 'error' => $e->getMessage()];
         } catch (\Exception $e) {
             $this->error("❌ Connection Error: {$e->getMessage()}");
-            $this->comment("💡 This might be a network timeout or server unavailability issue");
             return ['connected' => false, 'error' => $e->getMessage()];
         }
     }
@@ -216,24 +171,37 @@ class StatusCommand extends Command
         $this->info('🖥️  Server Information');
         $this->line('─────────────────────');
 
-        try {
-            $common = MetaTraderClient::commonGet();
+        if (!$this->ensureConnection()) {
+            $this->error("❌ Connection lost, skipping server information");
+            return;
+        }
 
-            $this->table(
-                ['Property', 'Value'],
-                [
-                    ['Server Name', $common->Name ?? 'N/A'],
-                    ['Owner', $common->Owner ?? 'N/A'],
-                    ['Owner ID', $common->OwnerID ?? 'N/A'],
-                    ['Owner Host', $common->OwnerHost ?? 'N/A'],
-                    ['Owner Email', $common->OwnerEmail ?? 'N/A'],
-                    ['Product', $common->Product ?? 'N/A'],
-                    ['Account URL', $common->AccountURL ?? 'N/A'],
-                    ['Account Auto', $common->AccountAuto ? 'Yes' : 'No'],
-                    ['Live Update Mode', $common->LiveUpdateMode ?? 0],
-                ]
-            );
+        try {
+            $common = $this->executeWithRetry(function () {
+                return MetaTraderClient::commonGet();
+            });
+
+            if ($common) {
+                $this->table(
+                    ['Property', 'Value'],
+                    [
+                        ['Server Name', $common->Name ?? 'N/A'],
+                        ['Owner', $common->Owner ?? 'N/A'],
+                        ['Owner ID', $common->OwnerID ?? 'N/A'],
+                        ['Owner Host', $common->OwnerHost ?? 'N/A'],
+                        ['Owner Email', $common->OwnerEmail ?? 'N/A'],
+                        ['Product', $common->Product ?? 'N/A'],
+                        ['Account URL', $common->AccountURL ?? 'N/A'],
+                        ['Account Auto', $common->AccountAuto ? 'Yes' : 'No'],
+                        ['Live Update Mode', $common->LiveUpdateMode ?? 0],
+                    ]
+                );
+            } else {
+                $this->error("❌ Failed to get server information");
+            }
         } catch (MetaTraderException $e) {
+            $this->error("❌ Failed to get server information: {$e->getMessage()}");
+        } catch (\Exception $e) {
             $this->error("❌ Failed to get server information: {$e->getMessage()}");
         }
     }
@@ -246,23 +214,37 @@ class StatusCommand extends Command
         $this->info('📊 Server Statistics');
         $this->line('────────────────────');
 
+        if (!$this->ensureConnection()) {
+            $this->error("❌ Connection lost, skipping server statistics");
+            return;
+        }
+
         try {
-            $common = MetaTraderClient::commonGet();
+            $common = $this->executeWithRetry(function () {
+                return MetaTraderClient::commonGet();
+            });
+
+            if (!$common) {
+                $this->error("❌ Failed to get server statistics");
+                return;
+            }
 
             // Get additional counts
             $totalGroups = 0;
             $totalSymbols = 0;
 
-            try {
-                $totalGroups = MetaTraderClient::groupTotal();
-            } catch (MetaTraderException $e) {
-                // Ignore error, use 0
+            $groupCount = $this->executeWithRetry(function () {
+                return MetaTraderClient::groupTotal();
+            });
+            if ($groupCount !== null) {
+                $totalGroups = $groupCount;
             }
 
-            try {
-                $totalSymbols = MetaTraderClient::symbolTotal();
-            } catch (MetaTraderException $e) {
-                // Ignore error, use 0
+            $symbolCount = $this->executeWithRetry(function () {
+                return MetaTraderClient::symbolTotal();
+            });
+            if ($symbolCount !== null) {
+                $totalSymbols = $symbolCount;
             }
 
             $this->table(
@@ -280,6 +262,8 @@ class StatusCommand extends Command
             );
         } catch (MetaTraderException $e) {
             $this->error("❌ Failed to get server statistics: {$e->getMessage()}");
+        } catch (\Exception $e) {
+            $this->error("❌ Failed to get server statistics: {$e->getMessage()}");
         }
     }
 
@@ -291,8 +275,20 @@ class StatusCommand extends Command
         $this->info('📝 License Information');
         $this->line('─────────────────────');
 
+        if (!$this->ensureConnection()) {
+            $this->error("❌ Connection lost, skipping license information");
+            return;
+        }
+
         try {
-            $common = MetaTraderClient::commonGet();
+            $common = $this->executeWithRetry(function () {
+                return MetaTraderClient::commonGet();
+            });
+
+            if (!$common) {
+                $this->error("❌ Failed to get license information");
+                return;
+            }
 
             $licenseExpiry = $common->ExpirationLicense ?? 0;
             $supportExpiry = $common->ExpirationSupport ?? 0;
@@ -316,6 +312,8 @@ class StatusCommand extends Command
                 $this->warn('⚠️  License expires within 30 days!');
             }
         } catch (MetaTraderException $e) {
+            $this->error("❌ Failed to get license information: {$e->getMessage()}");
+        } catch (\Exception $e) {
             $this->error("❌ Failed to get license information: {$e->getMessage()}");
         }
     }
@@ -348,107 +346,72 @@ class StatusCommand extends Command
     }
 
     /**
-     * Display sample of groups.
+     * Execute a function with retry logic for connection issues.
      */
-    protected function displayGroupSample(): void
+    protected function executeWithRetry(callable $function, int $maxRetries = 2)
     {
-        $this->info('👥 Groups Sample (First 5)');
-        $this->line('─────────────────────────');
+        $attempt = 0;
 
-        try {
-            $totalGroups = MetaTraderClient::groupTotal();
-
-            if ($totalGroups === 0) {
-                $this->warn('No groups found');
-                return;
-            }
-
-            $groups = [];
-            $maxGroups = min($totalGroups, 5);
-
-            for ($i = 0; $i < $maxGroups; $i++) {
-                try {
-                    $group = MetaTraderClient::groupNext($i);
-
-                    // Try to get user count for this group
-                    $userCount = 0;
-                    try {
-                        $userLogins = MetaTraderClient::userLogins($group->Group);
-                        $userCount = count($userLogins);
-                    } catch (MetaTraderException $e) {
-                        // Ignore error, use 0
+        while ($attempt < $maxRetries) {
+            try {
+                if ($attempt > 0) {
+                    // Force reconnection on retry
+                    if (MetaTraderClient::isConnected()) {
+                        MetaTraderClient::disconnect();
+                        usleep(500000); // 0.5 second delay
                     }
+                    MetaTraderClient::connect();
+                    usleep(200000); // 0.2 second delay after connect
+                }
 
-                    $groups[] = [
-                        $group->Group ?? 'N/A',
-                        $group->Company ?? 'N/A',
-                        $group->Currency ?? 'USD',
-                        number_format($group->Leverage ?? 0),
-                        number_format($userCount),
-                    ];
-                } catch (MetaTraderException $e) {
-                    continue;
+                return $function();
+            } catch (\Exception $e) {
+                $attempt++;
+                $errorMsg = $e->getMessage();
+
+                // Check for socket-related errors that indicate connection issues
+                if (
+                    strpos($errorMsg, 'Broken pipe') !== false ||
+                    strpos($errorMsg, 'socket_write') !== false ||
+                    strpos($errorMsg, 'Network error') !== false ||
+                    strpos($errorMsg, 'Connection lost') !== false
+                ) {
+                    if ($attempt < $maxRetries) {
+                        continue;
+                    }
+                } else {
+                    // For non-connection errors, don't retry
+                    throw $e;
                 }
             }
-
-            if (!empty($groups)) {
-                $this->table(
-                    ['Group Name', 'Company', 'Currency', 'Leverage', 'Users'],
-                    $groups
-                );
-            } else {
-                $this->warn('No group information could be retrieved');
-            }
-        } catch (MetaTraderException $e) {
-            $this->error("❌ Failed to get groups: {$e->getMessage()}");
         }
+
+        return null;
     }
 
     /**
-     * Display sample of symbols.
+     * Ensure MT5 connection is still active.
      */
-    protected function displaySymbolSample(): void
+    protected function ensureConnection(): bool
     {
-        $this->info('📈 Symbols Sample (First 5)');
-        $this->line('──────────────────────────');
-
         try {
-            $totalSymbols = MetaTraderClient::symbolTotal();
-
-            if ($totalSymbols === 0) {
-                $this->warn('No symbols found');
-                return;
+            // Always disconnect and reconnect to ensure fresh connection
+            if (MetaTraderClient::isConnected()) {
+                MetaTraderClient::disconnect();
+                usleep(100000); // 0.1 second delay after disconnect
             }
 
-            $symbols = [];
-            $maxSymbols = min($totalSymbols, 5);
+            MetaTraderClient::connect();
 
-            for ($i = 0; $i < $maxSymbols; $i++) {
-                try {
-                    $symbol = MetaTraderClient::symbolNext($i);
-
-                    $symbols[] = [
-                        $symbol->Symbol ?? 'N/A',
-                        $symbol->Description ?? 'N/A',
-                        $symbol->CurrencyBase ?? 'N/A',
-                        $symbol->CurrencyProfit ?? 'N/A',
-                        $symbol->Path ?? 'N/A',
-                    ];
-                } catch (MetaTraderException $e) {
-                    continue;
-                }
+            // Test connection with a simple call
+            try {
+                MetaTraderClient::timeServer();
+                return true;
+            } catch (\Exception $e) {
+                return false;
             }
-
-            if (!empty($symbols)) {
-                $this->table(
-                    ['Symbol', 'Description', 'Base Currency', 'Profit Currency', 'Path'],
-                    $symbols
-                );
-            } else {
-                $this->warn('No symbol information could be retrieved');
-            }
-        } catch (MetaTraderException $e) {
-            $this->error("❌ Failed to get symbols: {$e->getMessage()}");
+        } catch (\Exception $e) {
+            return false;
         }
     }
 
@@ -474,14 +437,12 @@ class StatusCommand extends Command
             );
 
             if ($connection === false) {
-                $this->comment("   → Socket error: {$errstr} (Code: {$errno})");
                 return false;
             }
 
             fclose($connection);
             return true;
         } catch (\Exception $e) {
-            $this->comment("   → Network test failed: {$e->getMessage()}");
             return false;
         }
     }
@@ -491,9 +452,10 @@ class StatusCommand extends Command
      */
     protected function displayFooter(): void
     {
-        $this->info('═══════════════════════════════════════════');
+        $this->info('═══════════════════════════════════════');
         $this->info('📋 Status report completed at ' . date('Y-m-d H:i:s T'));
         $this->newLine();
-        $this->comment('💡 Tip: Configure missing settings with: php artisan vendor:publish --tag=meta-trader-client-config');
+        $this->comment('💡 Use mt5:groups and mt5:symbols to view groups and symbols data');
+        $this->comment('💡 Configure missing settings with: php artisan vendor:publish --tag=meta-trader-client-config');
     }
 }

@@ -26,9 +26,9 @@ class MTGroupAnswer
         $result->Group = (string) $obj->Group;
         $result->Server = (int) $obj->Server;
         $result->PermissionsFlags = (int) $obj->PermissionsFlags;
-        $result->AuthMode = (int) $obj->AuthMode;
-        $result->AuthPasswordMin = (int) $obj->AuthPasswordMin;
-        $result->AuthOTPMode = (int) $obj->AuthOTPMode;
+        $result->AuthMode = isset($obj->AuthMode) ? (int) $obj->AuthMode : 0;
+        $result->AuthPasswordMin = isset($obj->AuthPasswordMin) ? (int) $obj->AuthPasswordMin : 0;
+        $result->AuthOTPMode = isset($obj->AuthOTPMode) ? (int) $obj->AuthOTPMode : 0;
         $result->Company = (string) $obj->Company;
         $result->CompanyPage = (string) $obj->CompanyPage;
         $result->CompanyEmail = (string) $obj->CompanyEmail;
@@ -39,23 +39,23 @@ class MTGroupAnswer
         $result->CurrencyDigits = (int) $obj->CurrencyDigits;
         $result->ReportsMode = (int) $obj->ReportsMode;
         $result->ReportsFlags = (int) $obj->ReportsFlags;
-        $result->ReportsSMTP = (string) $obj->ReportsSMTP;
-        $result->ReportsSMTPLogin = (string) $obj->ReportsSMTPLogin;
-        $result->ReportsSMTPPass = (string) $obj->ReportsSMTPPass;
-        $result->NewsMode = (int) $obj->NewsMode;
-        $result->NewsCategory = (string) $obj->NewsCategory;
-        $result->NewsLangs = (array) $obj->NewsLangs;
-        $result->MailMode = (int) $obj->MailMode;
-        $result->TradeFlags = (int) $obj->TradeFlags;
-        $result->TradeTransferMode = (int) $obj->TradeTransferMode;
+        $result->ReportsSMTP = isset($obj->ReportsSMTP) ? (string) $obj->ReportsSMTP : '';
+        $result->ReportsSMTPLogin = isset($obj->ReportsSMTPLogin) ? (string) $obj->ReportsSMTPLogin : '';
+        $result->ReportsSMTPPass = isset($obj->ReportsSMTPPass) ? (string) $obj->ReportsSMTPPass : '';
+        $result->NewsMode = isset($obj->NewsMode) ? (int) $obj->NewsMode : 0;
+        $result->NewsCategory = isset($obj->NewsCategory) ? (string) $obj->NewsCategory : '';
+        $result->NewsLangs = isset($obj->NewsLangs) ? (array) $obj->NewsLangs : [];
+        $result->MailMode = isset($obj->MailMode) ? (int) $obj->MailMode : 0;
+        $result->TradeFlags = isset($obj->TradeFlags) ? (int) $obj->TradeFlags : 0;
+        $result->TradeTransferMode = isset($obj->TradeTransferMode) ? (int) $obj->TradeTransferMode : 0;
         $result->TradeInterestrate = (float) $obj->TradeInterestrate;
         $result->TradeVirtualCredit = (float) $obj->TradeVirtualCredit;
         $result->MarginMode = (int) $obj->MarginMode;
-        $result->MarginSOMode = (int) $obj->MarginSOMode;
-        $result->MarginFreeMode = (int) $obj->MarginFreeMode;
-        $result->MarginCall = (float) $obj->MarginCall;
-        $result->MarginStopOut = (float) $obj->MarginStopOut;
-        $result->MarginFreeProfitMode = (int) $obj->MarginFreeProfitMode;
+        $result->MarginSOMode = isset($obj->MarginSOMode) ? (int) $obj->MarginSOMode : 0;
+        $result->MarginFreeMode = isset($obj->MarginFreeMode) ? (int) $obj->MarginFreeMode : 0;
+        $result->MarginCall = isset($obj->MarginCall) ? (float) $obj->MarginCall : 0.0;
+        $result->MarginStopOut = isset($obj->MarginStopOut) ? (float) $obj->MarginStopOut : 0.0;
+        $result->MarginFreeProfitMode = isset($obj->MarginFreeProfitMode) ? (int) $obj->MarginFreeProfitMode : 0;
         $result->DemoLeverage = (int) $obj->DemoLeverage;
         $result->DemoDeposit = (float) $obj->DemoDeposit;
         $result->LimitHistory = (int) $obj->LimitHistory;
@@ -162,42 +162,42 @@ class MTGroupAnswer
         $new = false;
 
         if (isset($obj->MarginInitialBuy)) {
-            $result[MTEnMarginRateTypes::MARGIN_RATE_BUY] = $obj->MarginInitialBuy;
+            $result[MTEnMarginRateTypes::MARGIN_RATE_BUY] = (float) $obj->MarginInitialBuy;
             $new = true;
         }
 
         if (isset($obj->MarginInitialSell)) {
-            $result[MTEnMarginRateTypes::MARGIN_RATE_SELL] = $obj->MarginInitialSell;
+            $result[MTEnMarginRateTypes::MARGIN_RATE_SELL] = (float) $obj->MarginInitialSell;
             $new = true;
         }
 
         if (isset($obj->MarginInitialBuyLimit)) {
-            $result[MTEnMarginRateTypes::MARGIN_RATE_BUY_LIMIT] = $obj->MarginInitialBuyLimit;
+            $result[MTEnMarginRateTypes::MARGIN_RATE_BUY_LIMIT] = (float) $obj->MarginInitialBuyLimit;
             $new = true;
         }
 
         if (isset($obj->MarginInitialSellLimit)) {
-            $result[MTEnMarginRateTypes::MARGIN_RATE_SELL_LIMIT] = $obj->MarginInitialSellLimit;
+            $result[MTEnMarginRateTypes::MARGIN_RATE_SELL_LIMIT] = (float) $obj->MarginInitialSellLimit;
             $new = true;
         }
 
         if (isset($obj->MarginInitialBuyStop)) {
-            $result[MTEnMarginRateTypes::MARGIN_RATE_BUY_STOP] = $obj->MarginInitialBuyStop;
+            $result[MTEnMarginRateTypes::MARGIN_RATE_BUY_STOP] = (float) $obj->MarginInitialBuyStop;
             $new = true;
         }
 
         if (isset($obj->MarginInitialSellStop)) {
-            $result[MTEnMarginRateTypes::MARGIN_RATE_SELL_STOP] = $obj->MarginInitialSellStop;
+            $result[MTEnMarginRateTypes::MARGIN_RATE_SELL_STOP] = (float) $obj->MarginInitialSellStop;
             $new = true;
         }
 
         if (isset($obj->MarginInitialBuyStopLimit)) {
-            $result[MTEnMarginRateTypes::MARGIN_RATE_BUY_STOP_LIMIT] = $obj->MarginInitialBuyStopLimit;
+            $result[MTEnMarginRateTypes::MARGIN_RATE_BUY_STOP_LIMIT] = (float) $obj->MarginInitialBuyStopLimit;
             $new = true;
         }
 
         if (isset($obj->MarginInitialSellStopLimit)) {
-            $result[MTEnMarginRateTypes::MARGIN_RATE_SELL_STOP_LIMIT] = $obj->MarginInitialSellStopLimit;
+            $result[MTEnMarginRateTypes::MARGIN_RATE_SELL_STOP_LIMIT] = (float) $obj->MarginInitialSellStopLimit;
             $new = true;
         }
 
@@ -219,33 +219,37 @@ class MTGroupAnswer
 
         if (isset($obj->MarginLong)) {
             $symbol->MarginLong = (float) $obj->MarginLong;
-            $result[MTEnMarginRateTypes::MARGIN_RATE_BUY] = $symbol->MarginLong;
+            $result[MTEnMarginRateTypes::MARGIN_RATE_BUY] = (float) $symbol->MarginLong;
+        } else {
+            $symbol->MarginLong = 0.0;
         }
 
         if (isset($obj->MarginShort)) {
             $symbol->MarginShort = (float) $obj->MarginShort;
-            $result[MTEnMarginRateTypes::MARGIN_RATE_SELL] = $symbol->MarginShort;
+            $result[MTEnMarginRateTypes::MARGIN_RATE_SELL] = (float) $symbol->MarginShort;
+        } else {
+            $symbol->MarginShort = 0.0;
         }
 
         if (isset($obj->MarginLimit)) {
             $symbol->MarginLimit = (float) $obj->MarginLimit;
 
-            $result[MTEnMarginRateTypes::MARGIN_RATE_BUY_LIMIT] = $symbol->MarginLimit * $symbol->MarginLong;
-            $result[MTEnMarginRateTypes::MARGIN_RATE_SELL_LIMIT] = $symbol->MarginLimit * $symbol->MarginShort;
+            $result[MTEnMarginRateTypes::MARGIN_RATE_BUY_LIMIT] = $symbol->MarginLimit * (float) $symbol->MarginLong;
+            $result[MTEnMarginRateTypes::MARGIN_RATE_SELL_LIMIT] = $symbol->MarginLimit * (float) $symbol->MarginShort;
         }
 
         if (isset($obj->MarginStop)) {
             $symbol->MarginStop = (float) $obj->MarginStop;
 
-            $result[MTEnMarginRateTypes::MARGIN_RATE_BUY_STOP] = $symbol->MarginStop * $symbol->MarginLong;
-            $result[MTEnMarginRateTypes::MARGIN_RATE_SELL_STOP] = $symbol->MarginStop * $symbol->MarginShort;
+            $result[MTEnMarginRateTypes::MARGIN_RATE_BUY_STOP] = $symbol->MarginStop * (float) $symbol->MarginLong;
+            $result[MTEnMarginRateTypes::MARGIN_RATE_SELL_STOP] = $symbol->MarginStop * (float) $symbol->MarginShort;
         }
 
         if (isset($obj->MarginStopLimit)) {
             $symbol->MarginStopLimit = (float) $obj->MarginStopLimit;
 
-            $result[MTEnMarginRateTypes::MARGIN_RATE_BUY_STOP_LIMIT] = $symbol->MarginStopLimit * $symbol->MarginLong;
-            $result[MTEnMarginRateTypes::MARGIN_RATE_SELL_STOP_LIMIT] = $symbol->MarginStopLimit * $symbol->MarginShort;
+            $result[MTEnMarginRateTypes::MARGIN_RATE_BUY_STOP_LIMIT] = $symbol->MarginStopLimit * (float) $symbol->MarginLong;
+            $result[MTEnMarginRateTypes::MARGIN_RATE_SELL_STOP_LIMIT] = $symbol->MarginStopLimit * (float) $symbol->MarginShort;
         }
 
         $symbol->MarginRateInitial = $result;
@@ -256,8 +260,8 @@ class MTGroupAnswer
      */
     private function OldMarginRateInitialSet(&$symbol, $obj)
     {
-        $symbol->MarginLong = $symbol->MarginRateInitial[MTEnMarginRateTypes::MARGIN_RATE_BUY];
-        $symbol->MarginShort = $symbol->MarginRateInitial[MTEnMarginRateTypes::MARGIN_RATE_SELL];
+        $symbol->MarginLong = (float) $symbol->MarginRateInitial[MTEnMarginRateTypes::MARGIN_RATE_BUY];
+        $symbol->MarginShort = (float) $symbol->MarginRateInitial[MTEnMarginRateTypes::MARGIN_RATE_SELL];
 
         $marginLimitLong = 0;
         $marginStopLong = 0;
@@ -268,15 +272,15 @@ class MTGroupAnswer
         $marginStopLimitShort = 0;
 
         if ($symbol->MarginLong != 0) {
-            $marginLimitLong = $symbol->MarginRateInitial[MTEnMarginRateTypes::MARGIN_RATE_BUY_LIMIT] / $symbol->MarginLong;
-            $marginStopLong = $symbol->MarginRateInitial[MTEnMarginRateTypes::MARGIN_RATE_BUY_STOP] / $symbol->MarginLong;
-            $marginStopLimitLong = $symbol->MarginRateInitial[MTEnMarginRateTypes::MARGIN_RATE_BUY_STOP_LIMIT] / $symbol->MarginLong;
+            $marginLimitLong = (float) $symbol->MarginRateInitial[MTEnMarginRateTypes::MARGIN_RATE_BUY_LIMIT] / $symbol->MarginLong;
+            $marginStopLong = (float) $symbol->MarginRateInitial[MTEnMarginRateTypes::MARGIN_RATE_BUY_STOP] / $symbol->MarginLong;
+            $marginStopLimitLong = (float) $symbol->MarginRateInitial[MTEnMarginRateTypes::MARGIN_RATE_BUY_STOP_LIMIT] / $symbol->MarginLong;
         }
 
         if ($symbol->MarginShort != 0) {
-            $marginLimitShort = $symbol->MarginRateInitial[MTEnMarginRateTypes::MARGIN_RATE_SELL_LIMIT] / $symbol->MarginShort;
-            $marginStopShort = $symbol->MarginRateInitial[MTEnMarginRateTypes::MARGIN_RATE_SELL_STOP] / $symbol->MarginShort;
-            $marginStopLimitShort = $symbol->MarginRateInitial[MTEnMarginRateTypes::MARGIN_RATE_SELL_STOP_LIMIT] / $symbol->MarginShort;
+            $marginLimitShort = (float) $symbol->MarginRateInitial[MTEnMarginRateTypes::MARGIN_RATE_SELL_LIMIT] / $symbol->MarginShort;
+            $marginStopShort = (float) $symbol->MarginRateInitial[MTEnMarginRateTypes::MARGIN_RATE_SELL_STOP] / $symbol->MarginShort;
+            $marginStopLimitShort = (float) $symbol->MarginRateInitial[MTEnMarginRateTypes::MARGIN_RATE_SELL_STOP_LIMIT] / $symbol->MarginShort;
         }
 
         $symbol->MarginLimit = max($marginLimitLong, $marginLimitShort);
@@ -295,22 +299,22 @@ class MTGroupAnswer
     {
         $result = MTConSymbol::GetDefaultMarginRate();
         //--- set data
-        if (isset($obj->MarginInitialBuy))
-            $result[MTEnMarginRateTypes::MARGIN_RATE_BUY] = $obj->MarginMaintenanceBuy;
-        if (isset($obj->MarginInitialSell))
-            $result[MTEnMarginRateTypes::MARGIN_RATE_SELL] = $obj->MarginMaintenanceSell;
-        if (isset($obj->MarginInitialBuyLimit))
-            $result[MTEnMarginRateTypes::MARGIN_RATE_BUY_LIMIT] = $obj->MarginMaintenanceBuyLimit;
-        if (isset($obj->MarginInitialSellLimit))
-            $result[MTEnMarginRateTypes::MARGIN_RATE_SELL_LIMIT] = $obj->MarginMaintenanceSellLimit;
-        if (isset($obj->MarginInitialBuyStop))
-            $result[MTEnMarginRateTypes::MARGIN_RATE_BUY_STOP] = $obj->MarginMaintenanceBuyStop;
-        if (isset($obj->MarginInitialSellStop))
-            $result[MTEnMarginRateTypes::MARGIN_RATE_SELL_STOP] = $obj->MarginMaintenanceSellStop;
-        if (isset($obj->MarginInitialBuyStopLimit))
-            $result[MTEnMarginRateTypes::MARGIN_RATE_BUY_STOP_LIMIT] = $obj->MarginMaintenanceBuyStopLimit;
-        if (isset($obj->MarginInitialSellStopLimit))
-            $result[MTEnMarginRateTypes::MARGIN_RATE_SELL_STOP_LIMIT] = $obj->MarginMaintenanceSellStopLimit;
+        if (isset($obj->MarginMaintenanceBuy))
+            $result[MTEnMarginRateTypes::MARGIN_RATE_BUY] = (float) $obj->MarginMaintenanceBuy;
+        if (isset($obj->MarginMaintenanceSell))
+            $result[MTEnMarginRateTypes::MARGIN_RATE_SELL] = (float) $obj->MarginMaintenanceSell;
+        if (isset($obj->MarginMaintenanceBuyLimit))
+            $result[MTEnMarginRateTypes::MARGIN_RATE_BUY_LIMIT] = (float) $obj->MarginMaintenanceBuyLimit;
+        if (isset($obj->MarginMaintenanceSellLimit))
+            $result[MTEnMarginRateTypes::MARGIN_RATE_SELL_LIMIT] = (float) $obj->MarginMaintenanceSellLimit;
+        if (isset($obj->MarginMaintenanceBuyStop))
+            $result[MTEnMarginRateTypes::MARGIN_RATE_BUY_STOP] = (float) $obj->MarginMaintenanceBuyStop;
+        if (isset($obj->MarginMaintenanceSellStop))
+            $result[MTEnMarginRateTypes::MARGIN_RATE_SELL_STOP] = (float) $obj->MarginMaintenanceSellStop;
+        if (isset($obj->MarginMaintenanceBuyStopLimit))
+            $result[MTEnMarginRateTypes::MARGIN_RATE_BUY_STOP_LIMIT] = (float) $obj->MarginMaintenanceBuyStopLimit;
+        if (isset($obj->MarginMaintenanceSellStopLimit))
+            $result[MTEnMarginRateTypes::MARGIN_RATE_SELL_STOP_LIMIT] = (float) $obj->MarginMaintenanceSellStopLimit;
         //---
         return $result;
     }

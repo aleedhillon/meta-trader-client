@@ -2,7 +2,7 @@
     "name": "aleedhillon/meta-trader-client",
     "description": "A Laravel package for seamless integration with the MetaTrader 5 web API, enabling account management, trading operations, and more.",
     "license": "MIT",
-    "version": "2.1.1",
+    "version": "2.2.0",
     "authors": [
         {
             "name": "Ali A. Dhillon",

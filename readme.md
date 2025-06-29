@@ -553,28 +553,69 @@ php artisan vendor:publish --provider="Aleedhillon\MetaTraderClient\MetaTraderCl
 
 The package includes comprehensive Artisan commands to help you manage and monitor your MT5 integration:
 
-#### `mt5:status` - Comprehensive Status Report
+#### `mt5` - Package Information & Configuration
 
-Display a complete status report of your MT5 server connection, configuration, and statistics.
+Display package configuration and basic information without making any API calls.
+
+```bash
+php artisan mt5
+```
+
+**What it shows:**
+- 📋 Configuration settings and validation
+- 🔢 Version information (package, API, PHP, Laravel)
+- 🎯 Available commands overview
+
+#### `mt5:status` - Server Status Report
+
+Display server status, connection information, and statistics.
 
 ```bash
 php artisan mt5:status
 ```
 
 **What it shows:**
-- ✅ Configuration settings and validation
+- 📋 Configuration settings and validation
 - 🔍 Connection status and response time
 - 🖥️ Server information (name, owner, product)
 - 📊 Server statistics (users, deals, orders, positions)
 - 📝 License information and expiration dates
 - 🔢 Version information (package, API, PHP, Laravel)
-- 👥 Groups sample (first 5 groups)
-- 📈 Symbols sample (first 5 symbols)
 
-**Example output:**
+#### `mt5:groups` - Display All Trading Groups
+
+Show all trading groups with progress indicator.
+
+```bash
+php artisan mt5:groups
 ```
-🚀 MetaTrader 5 Comprehensive Status Report
-═══════════════════════════════════════════
+
+**What it shows:**
+- 👥 Complete list of all trading groups
+- 📊 Group details (name, company, currency, leverage)
+- 📈 Progress bar during data loading
+- ✅ Total count and completion status
+
+#### `mt5:symbols` - Display All Trading Symbols
+
+Show all trading symbols with progress indicator.
+
+```bash
+php artisan mt5:symbols
+```
+
+**What it shows:**
+- 📈 Complete list of all trading symbols
+- 📊 Symbol details (name, description, currencies, digits, path)
+- 📈 Progress bar during data loading
+- ✅ Total count and completion status
+
+**Example Outputs:**
+
+##### `mt5` Command Example:
+```
+🚀 MetaTrader 5 Package Information
+══════════════════════════════════
 
 📋 Configuration Settings
 ──────────────────────────
@@ -585,11 +626,45 @@ php artisan mt5:status
 │ Encryption      │ Enabled         │ MT5_SHOULD_CRYPT       │
 │ Server IP       │ 192.168.1.100   │ MT5_SERVER_IP          │
 │ Server Port     │ 443             │ MT5_SERVER_PORT        │
-│ Login           │ ***123          │ MT5_SERVER_WEB_LOGIN   │
-│ Password        │ ***********     │ MT5_SERVER_WEB_PASSWORD │
+│ Login           │ manager         │ MT5_SERVER_WEB_LOGIN   │
+│ Password        │ password123     │ MT5_SERVER_WEB_PASSWORD │
 │ Timeout         │ 30s             │ MT5_SERVER_TIMEOUT     │
 └─────────────────┴─────────────────┴─────────────────────────┘
 ✅ Configuration is complete
+
+🔢 Version Information
+─────────────────────
+┌─────────────────┬─────────────┐
+│ Component       │ Version     │
+├─────────────────┼─────────────┤
+│ Package Version │ 2.0.0       │
+│ Web API Version │ 5.0.3775    │
+│ Build           │ 3775        │
+│ API Version     │ 5.0         │
+│ PHP Version     │ 8.4.0       │
+│ Laravel Version │ 11.0.0      │
+└─────────────────┴─────────────┘
+
+🎯 Available Commands
+────────────────────
+┌─────────────┬─────────────────────────────────────────────────┐
+│ Command     │ Description                                     │
+├─────────────┼─────────────────────────────────────────────────┤
+│ mt5         │ Show package configuration and basic info       │
+│ mt5:status  │ Show server status, connection info, statistics │
+│ mt5:groups  │ Show all trading groups with progress indicator │
+│ mt5:symbols │ Show all trading symbols with progress indicator│
+└─────────────┴─────────────────────────────────────────────────┘
+```
+
+##### `mt5:status` Command Example:
+```
+🚀 MetaTrader 5 Server Status Report
+═══════════════════════════════════════
+
+📋 Configuration Settings
+──────────────────────────
+[Configuration table as above]
 
 🔍 Connection Status
 ───────────────────
@@ -645,45 +720,53 @@ php artisan mt5:status
 
 🔢 Version Information
 ─────────────────────
-┌─────────────────┬─────────────┐
-│ Component       │ Version     │
-├─────────────────┼─────────────┤
-│ Package Version │ 2.0.0       │
-│ Web API Version │ 5.0.3775    │
-│ Build           │ 3775        │
-│ API Version     │ 5.0         │
-│ PHP Version     │ 8.4.0       │
-│ Laravel Version │ 11.0.0      │
-└─────────────────┴─────────────┘
+[Version table as above]
+```
 
-👥 Groups Sample (First 5)
-─────────────────────────
+##### `mt5:groups` Command Example:
+```
+👥 MetaTrader 5 Trading Groups
+═══════════════════════════════
+
+Found 25 groups. Loading...
+
+████████████████████████████████████████ 25/25
+
 ┌────────────┬─────────────────┬──────────┬──────────┬───────┐
 │ Group Name │ Company         │ Currency │ Leverage │ Users │
 ├────────────┼─────────────────┼──────────┼──────────┼───────┤
-│ demo       │ Demo Company    │ USD      │ 100      │ 1,234 │
-│ real       │ Real Company    │ USD      │ 50       │ 5,678 │
-│ vip        │ VIP Company     │ USD      │ 200      │ 98    │
-│ cent       │ Cent Company    │ USD      │ 1,000    │ 456   │
-│ ecn        │ ECN Company     │ USD      │ 30       │ 789   │
+│ demo       │ Demo Company    │ USD      │ 100      │ N/A   │
+│ real       │ Real Company    │ USD      │ 50       │ N/A   │
+│ vip        │ VIP Company     │ USD      │ 200      │ N/A   │
+│ cent       │ Cent Company    │ USD      │ 1,000    │ N/A   │
+│ ecn        │ ECN Company     │ USD      │ 30       │ N/A   │
+│ ...        │ ...             │ ...      │ ...      │ ...   │
 └────────────┴─────────────────┴──────────┴──────────┴───────┘
 
-📈 Symbols Sample (First 5)
-──────────────────────────
-┌────────┬─────────────────┬───────────────┬─────────────────┬────────────┐
-│ Symbol │ Description     │ Base Currency │ Profit Currency │ Path       │
-├────────┼─────────────────┼───────────────┼─────────────────┼────────────┤
-│ EURUSD │ Euro vs US Dollar│ EUR          │ USD             │ Forex\Major│
-│ GBPUSD │ British Pound vs USD│ GBP      │ USD             │ Forex\Major│
-│ USDJPY │ US Dollar vs Yen│ USD          │ JPY             │ Forex\Major│
-│ USDCHF │ US Dollar vs Franc│ USD        │ CHF             │ Forex\Major│
-│ AUDUSD │ Australian Dollar vs USD│ AUD  │ USD             │ Forex\Major│
-└────────┴─────────────────┴───────────────┴─────────────────┴────────────┘
+✅ Successfully displayed 25 groups
+```
 
-═══════════════════════════════════════════
-📋 Status report completed at 2024-01-15 14:30:47 UTC
+##### `mt5:symbols` Command Example:
+```
+📈 MetaTrader 5 Trading Symbols
+════════════════════════════════
 
-💡 Tip: Configure missing settings with: php artisan vendor:publish --tag=meta-trader-client-config
+Found 156 symbols. Loading...
+
+████████████████████████████████████████ 156/156
+
+┌────────┬──────────────────┬───────────────┬─────────────────┬────────┬─────────────┐
+│ Symbol │ Description      │ Base Currency │ Profit Currency │ Digits │ Path        │
+├────────┼──────────────────┼───────────────┼─────────────────┼────────┼─────────────┤
+│ EURUSD │ Euro vs US Dollar│ EUR           │ USD             │ 5      │ Forex\Major │
+│ GBPUSD │ British Pound vs USD│ GBP       │ USD             │ 5      │ Forex\Major │
+│ USDJPY │ US Dollar vs Yen │ USD           │ JPY             │ 3      │ Forex\Major │
+│ USDCHF │ US Dollar vs Franc│ USD          │ CHF             │ 5      │ Forex\Major │
+│ AUDUSD │ Australian Dollar vs USD│ AUD   │ USD             │ 5      │ Forex\Major │
+│ ...    │ ...              │ ...           │ ...             │ ...    │ ...         │
+└────────┴──────────────────┴───────────────┴─────────────────┴────────┴─────────────┘
+
+✅ Successfully displayed 156 symbols
 ```
 
 #### General Laravel Commands
@@ -691,6 +774,9 @@ php artisan mt5:status
 ```bash
 # View package information
 php artisan about
+
+# List all available MT5 commands
+php artisan list mt5
 ```
 
 ## 🔧 Advanced Usage
